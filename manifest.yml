@@ -1,13 +1,15 @@
 ---
 applications:
 - name: mongodb-service-broker
-  memory: 1G
+  memory: 756M
   instances: 1
-  path: build/libs/cloudfoundry-mongodb-service-broker.jar
+  path: build/libs/service-broker-mongodb.jar
+  routes:
+  - route: mongodb-service-broker.sys.humourmind.com
   env:
-    MONGODB_HOST: host.pcfdev.io
-    MONGODB_PORT: 27017
-    MONGODB_USERNAME: admin
-    MONGODB_PASSWORD: password
+    #MONGODB_HOST: sys.humourmind.com
+    #MONGODB_PORT: 27017
+    #MONGODB_USERNAME: admin
+    #MONGODB_PASSWORD: password
     SECURITY_USER_NAME: admin
     SECURITY_USER_PASSWORD: admin

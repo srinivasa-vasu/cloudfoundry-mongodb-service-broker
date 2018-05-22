@@ -19,9 +19,9 @@ public class CatalogConfig {
 	public Catalog catalog() {
 		return new Catalog(Collections.singletonList(
 				new ServiceDefinition(
-						"mongodb-service-broker",
+						"mongodb-on-demand-service-broker",
 						"mongodb",
-						"A simple MongoDB service broker implementation",
+						"A PKS MongoDB on-demand service broker implementation",
 						true,
 						false,
 						Collections.singletonList(
@@ -43,8 +43,8 @@ public class CatalogConfig {
 		sdMetadata.put("imageUrl", "http://info.mongodb.com/rs/mongodb/images/MongoDB_Logo_Full.png");
 		sdMetadata.put("longDescription", "MongoDB Service");
 		sdMetadata.put("providerDisplayName", "Pivotal");
-		sdMetadata.put("documentationUrl", "https://github.com/spring-cloud-samples/cloudfoundry-mongodb-service-broker");
-		sdMetadata.put("supportUrl", "https://github.com/spring-cloud-samples/cloudfoundry-mongodb-service-broker");
+		sdMetadata.put("documentationUrl", "https://github.com/srinivasa-vasu/cloudfoundry-service-broker");
+		sdMetadata.put("supportUrl", "https://github.com/srinivasa-vasu/cloudfoundry-service-broker");
 		return sdMetadata;
 	}
 	
@@ -68,8 +68,8 @@ public class CatalogConfig {
 	}
 	
 	private List<String> getBullets() {
-		return Arrays.asList("Shared MongoDB server", 
-				"100 MB Storage (not enforced)", 
+		return Arrays.asList("On-demand MongoDB server",
+				"128 Mi Storage (enforced)",
 				"40 concurrent connections (not enforced)");
 	}
 	

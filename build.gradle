@@ -22,8 +22,8 @@ ext {
 	version = '0.1.0.BUILD-SNAPSHOT'
 }
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
 	mavenCentral()
@@ -33,6 +33,8 @@ dependencies {
 	compile("org.springframework.cloud:spring-cloud-cloudfoundry-service-broker:${springCloudFoundryServiceBrokerVersion}")
 	compile("org.apache.commons:commons-lang3:3.4")
 	compile("org.springframework.boot:spring-boot-starter-data-mongodb:1.5.8.RELEASE")
+	compile("org.springframework.boot:spring-boot-starter-freemarker")
+    compile("org.freemarker:freemarker")
 
 	testCompile(group: "org.springframework.cloud", name: "spring-cloud-cloudfoundry-service-broker", version: "${springCloudFoundryServiceBrokerVersion}", classifier: "tests")
 	testCompile("org.springframework.boot:spring-boot-starter-test")
@@ -43,5 +45,5 @@ jar {
 }
 
 task wrapper(type: Wrapper) {
-	gradleVersion = '2.9'
+	gradleVersion = '4.4'
 }

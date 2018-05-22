@@ -1,5 +1,5 @@
 mongodb:
-  host: localhost
-  port: 27017
+  host: x.x.x.x
+  port: 31000
   username: admin
   password: password

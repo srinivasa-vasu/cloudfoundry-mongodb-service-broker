@@ -1,8 +1,8 @@
 package org.springframework.cloud.servicebroker.mongodb.config;
 
-import java.net.UnknownHostException;
 import java.util.Arrays;
 
+import org.springframework.beans.factory.annotation.Required;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,11 +31,48 @@ public class MongoConfig {
 	@Value("${mongodb.authdb:admin}")
 	private String authSource;
 
+    @Value("${mongodb.authToken:}")
+    private String accessToken;
+
+    @Value("${mongodb.namespace:}")
+	private String namespace;
+
+    @Value("${mongodb.masterurl:}")
+	private String masterUrl;
+
+    @Value("${mongodb.servicename:mongo-od}")
+	private String name;
+
+    @Value("${mongodb.service.timeout:30}")
+    private long serviceTimeout;
+
 	@Bean
-	public MongoClient mongoClient() throws UnknownHostException {
+	public MongoClient mongoClient() {
 		final MongoCredential credential = MongoCredential.createScramSha1Credential(username, authSource, password.toCharArray());
 		return new MongoClient(new ServerAddress(host, port), Arrays.asList(credential));
 	}
 
+    public int getPort() {
+        return port;
+    }
 
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public String getMasterUrl() {
+        return masterUrl;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public long getServiceTimeout() {
+        return serviceTimeout;
+    }
 }

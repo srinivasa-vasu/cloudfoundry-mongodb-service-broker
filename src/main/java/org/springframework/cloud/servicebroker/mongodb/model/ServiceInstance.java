@@ -7,6 +7,8 @@ import org.springframework.cloud.servicebroker.model.CreateServiceInstanceReques
 import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
 import org.springframework.cloud.servicebroker.model.UpdateServiceInstanceRequest;
 
+import java.util.Map;
+
 /**
  * An instance of a ServiceDefinition.
  *
@@ -39,6 +41,10 @@ public class ServiceInstance {
 	@JsonProperty("dashboard_url")
 	private String dashboardUrl;
 
+	@JsonSerialize
+	@JsonProperty("parameters")
+	private Map<String, Object> parameters;
+
 	@SuppressWarnings("unused")
 	private ServiceInstance() {}
 
@@ -64,6 +70,7 @@ public class ServiceInstance {
 		this.organizationGuid = request.getOrganizationGuid();
 		this.spaceGuid = request.getSpaceGuid();
 		this.id = request.getServiceInstanceId();
+		this.parameters = request.getParameters();
 	}
 
 	/**

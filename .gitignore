@@ -3,6 +3,12 @@
 .settings
 .springBeans
 .gradle
+.idea
+.idea/codeStyles/codeStyleConfig.xml
+.idea/uiDesigner.xml
 build
 target
 bin
+*.iml
+out
+local.properties
