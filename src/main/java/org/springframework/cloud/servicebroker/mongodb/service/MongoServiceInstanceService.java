@@ -1,18 +1,15 @@
 package org.springframework.cloud.servicebroker.mongodb.service;
 
-import static org.springframework.cloud.servicebroker.model.OperationState.FAILED;
-import static org.springframework.cloud.servicebroker.model.OperationState.IN_PROGRESS;
-import static org.springframework.cloud.servicebroker.model.OperationState.SUCCEEDED;
+import static org.springframework.cloud.servicebroker.model.OperationState.*;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.annotation.PreDestroy;
 
-import freemarker.template.TemplateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +26,8 @@ import org.springframework.stereotype.Service;
 
 import com.mongodb.client.MongoDatabase;
 
+import freemarker.template.TemplateException;
+
 /**
  * Mongo impl to manage service instances. Creating a service does the following: creates
  * a new database, saves the ServiceInstance info to the Mongo repository.
@@ -44,8 +43,6 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 
 	private MongoK8sService k8sService;
 
-	private ServiceObjectInstance objInstance;
-
 	private MongoConfig config;
 
 	private static final Logger LOGGER = LoggerFactory
@@ -53,7 +50,9 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 
 	private final ExecutorService servicePool = Executors.newFixedThreadPool(10);
 
-	private final Map<String, OperationState> asynServiceStatusMap = new WeakHashMap<>(30);
+	private final Map<String, OperationState> operationStatus = new HashMap<>();
+
+	private final Map<String, ServiceObjectInstance> serviceParams = new HashMap<>();
 
 	@Autowired
 	public MongoServiceInstanceService(MongoAdminService mongo,
@@ -69,18 +68,22 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 	public CreateServiceInstanceResponse createServiceInstance(
 			final CreateServiceInstanceRequest request) {
 		// TODO MongoDB dashboard
-		asynServiceStatusMap.put(request.getServiceInstanceId(), IN_PROGRESS);
+		operationStatus.put(request.getServiceInstanceId(), IN_PROGRESS);
 		servicePool.execute(new Thread(() -> {
 			try {
-			    if(LOGGER.isDebugEnabled()){
-			        LOGGER.debug("Initializing service instance id: " + request.getServiceInstanceId());
-                }
-                ServiceInstance instance = new ServiceInstance(request);
-                objInstance = new ServiceObjectInstance(request, config);
-                if (k8sService.createK8sObjects(objInstance)) {
-                    if(LOGGER.isDebugEnabled()){
-                        LOGGER.debug("K8s mongo objects created for instance id: " + request.getServiceInstanceId());
-                    }
+				if (LOGGER.isDebugEnabled()) {
+					LOGGER.debug("Initializing service instance id: "
+							+ request.getServiceInstanceId());
+				}
+				ServiceInstance instance = new ServiceInstance(request);
+				ServiceObjectInstance objInstance = new ServiceObjectInstance(request,
+						config);
+				serviceParams.put(request.getServiceInstanceId(), objInstance);
+				if (k8sService.createK8sObjects(objInstance)) {
+					if (LOGGER.isDebugEnabled()) {
+						LOGGER.debug("K8s mongo objects created for instance id: "
+								+ request.getServiceInstanceId());
+					}
 					// ServiceInstance instance =
 					// repository.findOne(request.getServiceInstanceId());
 					// if (instance != null) {
@@ -95,23 +98,26 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 					MongoDatabase db = mongo
 							.createDatabase(instance.getServiceInstanceId());
 					if (db == null) {
-					    throw new MongoServiceException("unable to create mongo database instance");
+						throw new MongoServiceException(
+								"unable to create mongo database instance");
 					}
-                    repository.save(instance);
-                    asynServiceStatusMap.put(request.getServiceInstanceId(),
-                            OperationState.SUCCEEDED);
-                    if(LOGGER.isDebugEnabled()){
-                        LOGGER.debug("Successfully created the instance id: " + request.getServiceInstanceId());
-                    }
-                }
+					repository.save(instance);
+					operationStatus.put(request.getServiceInstanceId(),
+							OperationState.SUCCEEDED);
+					if (LOGGER.isDebugEnabled()) {
+						LOGGER.debug("Successfully created the instance id: "
+								+ request.getServiceInstanceId());
+					}
+				}
 				else {
-                    throw new MongoServiceException("unable to create mongo k8s objects");
+					throw new MongoServiceException("unable to create mongo k8s objects");
 				}
 			}
-			catch (IOException | InterruptedException | TemplateException | MongoServiceException ex) {
-				asynServiceStatusMap.put(request.getServiceInstanceId(), FAILED);
+			catch (IOException | InterruptedException | TemplateException
+					| MongoServiceException ex) {
+				operationStatus.put(request.getServiceInstanceId(), FAILED);
 				throw new ServiceBrokerException("Failed to create new DB instance: "
-						+ ex.getMessage() + ": " +request.getServiceInstanceId(), ex);
+						+ ex.getMessage() + ": " + request.getServiceInstanceId(), ex);
 			}
 		}));
 		return new CreateServiceInstanceResponse().withAsync(true);
@@ -120,11 +126,11 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 	@Override
 	public GetLastServiceOperationResponse getLastOperation(
 			GetLastServiceOperationRequest request) {
-		OperationState state = asynServiceStatusMap.get(request.getServiceInstanceId());
+		OperationState state = operationStatus.get(request.getServiceInstanceId());
 		if (state == IN_PROGRESS) {
 			return new GetLastServiceOperationResponse().withOperationState(state);
 		}
-		asynServiceStatusMap.remove(request.getServiceInstanceId());
+		operationStatus.remove(request.getServiceInstanceId());
 		return new GetLastServiceOperationResponse().withOperationState(state);
 	}
 
@@ -135,30 +141,31 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 	@Override
 	public DeleteServiceInstanceResponse deleteServiceInstance(
 			DeleteServiceInstanceRequest request) throws MongoServiceException {
-        asynServiceStatusMap.put(request.getServiceInstanceId(), IN_PROGRESS);
-	    servicePool.execute(new Thread(() -> {
-            String instanceId = request.getServiceInstanceId();
-            try {
-                ServiceInstance instance = repository.findOne(instanceId);
-                if (instance == null) {
-                    throw new ServiceInstanceDoesNotExistException(instanceId);
-                }
-                mongo.deleteDatabase(instanceId);
-                repository.delete(instanceId);
-                k8sService.deleteK8sObjects(objInstance);
-                asynServiceStatusMap.put(instanceId, SUCCEEDED);
-            } catch (Exception ex){
-                asynServiceStatusMap.put(instanceId, FAILED);
-                throw ex;
-            }
-        }));
+		operationStatus.put(request.getServiceInstanceId(), IN_PROGRESS);
+		servicePool.execute(new Thread(() -> {
+			String instanceId = request.getServiceInstanceId();
+			try {
+				ServiceInstance instance = repository.findOne(instanceId);
+				if (instance == null) {
+					throw new ServiceInstanceDoesNotExistException(instanceId);
+				}
+				mongo.deleteDatabase(instanceId);
+				repository.delete(instanceId);
+				k8sService.deleteK8sObjects(serviceParams.remove(instanceId));
+				operationStatus.put(instanceId, SUCCEEDED);
+			}
+			catch (Exception ex) {
+				operationStatus.put(instanceId, FAILED);
+				throw ex;
+			}
+		}));
 		return new DeleteServiceInstanceResponse().withAsync(true);
 	}
 
 	@Override
 	public UpdateServiceInstanceResponse updateServiceInstance(
 			UpdateServiceInstanceRequest request) {
-	    // not implemented
+		// not implemented
 		String instanceId = request.getServiceInstanceId();
 		ServiceInstance instance = repository.findOne(instanceId);
 		if (instance == null) {
