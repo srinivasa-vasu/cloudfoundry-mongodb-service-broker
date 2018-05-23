@@ -6,7 +6,7 @@ This spring Boot project using the https://github.com/spring-cloud/spring-cloud-
 
 == Getting Started
 
-This service broker `create service instance` call will install and configure a fully functional distributed MongoDB on Kubernetes.
+This service broker's `create service instance` call will install and configure a fully functional distributed MongoDB on Kubernetes.
 
 You have to configure the connectivity details in link:manifest.yml[manifest.yml] or link:src/main/resources/application.yml[application.yml].
 
@@ -75,6 +75,7 @@ _Note down the route url_
 cf create-service-broker mongodb admin admin <url>
 ```
 Replace `<url>` with the route url from `cf push` step
+
 * List brokers
 ```
 cf service-brokers
@@ -91,7 +92,7 @@ image:images/enable_service_access.png[service-access]
 
 === Create :: Service
 
-* Switch to development space
+* Switch to a development space
 ```
 cf target -o <dev_org> -s <dev_space>
 ```
@@ -112,11 +113,11 @@ cf create-service mongodb default mongo-ds -c '{"master_url": "<kubernetes_maste
 _Replace placeholders `<>` with actual values_
 
 * `master_url`: K8s cluster master url. Will be like `https://35.100.20.23:8443`
-* `namespace`: namespace/project that holds the k8s objects of mongodb like deployment, service manifest etc.
+* `namespace`: namespace/project that holds k8s objects of mongodb like deployment, service manifests etc.
 * `service_name`: mongodb deployment name
 * `token`: user access token from kube config file
 
-`create-service` will provision mongodb database on given kubernetes cluster asynchronously. You should get a response like,
+`create-service` will provision mongodb database on the given kubernetes cluster asynchronously. You should get a response like,
 image:images/create-service.png[create-service]
 
 * Check service creation status
@@ -148,4 +149,4 @@ applications:
 cf push
 ```
 
-Verify the results in the web browser
+Verify the results in a web browser
