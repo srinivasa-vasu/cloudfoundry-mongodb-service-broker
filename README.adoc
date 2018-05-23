@@ -1,6 +1,6 @@
 = Overview
 
-This project https://github.com/srinivasa-vasu/cloudfoundry-mongodb-service-broker.git[mongodb-ondemand-cf-broker] uses the Spring Cloud - Cloud Foundry Service Broker to implement a fully functional kubernetes statefulset MongoDB as a service. The MongoDB service also uses [spring-boot-data-mongodb](https://github.com/spring-projects/spring-boot/tree/master/spring-boot-starters/spring-boot-starter-data-mongodb) to persist service instances and bindings.
+This project https://github.com/srinivasa-vasu/cloudfoundry-mongodb-service-broker.git[mongodb-ondemand-cf-broker] uses the Spring Cloud - Cloud Foundry Service Broker to implement a fully functional kubernetes statefulset MongoDB as a service. The MongoDB service also uses https://github.com/spring-projects/spring-boot/tree/master/spring-boot-starters/spring-boot-starter-data-mongodb[spring-boot-data-mongodb] to persist service instances and bindings.
 
 This spring Boot project using the https://github.com/spring-cloud/spring-cloud-cloudfoundry-service-broker/tree/1.0.x[Spring Cloud - Cloud Foundry Service Broker 1.x].
 
