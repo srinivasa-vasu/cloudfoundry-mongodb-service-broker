@@ -10,3 +10,5 @@ bin
 *.iml
 out
 local.properties
+.DS_Store
+README.html

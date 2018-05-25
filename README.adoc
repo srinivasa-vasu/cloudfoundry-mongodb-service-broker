@@ -1,3 +1,8 @@
+:toc: right
+:toc-title: Contents
+
+:icons: font
+
 = Overview
 
 This project https://github.com/srinivasa-vasu/cloudfoundry-mongodb-service-broker.git[mongodb-ondemand-cf-broker] uses the Spring Cloud - Cloud Foundry Service Broker to implement a fully functional kubernetes statefulset MongoDB as a service. The MongoDB service also uses https://github.com/spring-projects/spring-boot/tree/master/spring-boot-starters/spring-boot-starter-data-mongodb[spring-boot-data-mongodb] to persist service instances and bindings.
@@ -27,13 +32,13 @@ mongodb:
   host: x.x.x.x
   port: 31000
 ```
-_Make the change in one of the two places_
+CAUTION: Make the change in one of the two places
 
 * Build it
 ```
 ./gradlew -x test clean build
 ```    
-* Note: Test cases are not fully written yet and hence some of the tests may not pass    
+NOTE: Test cases are not fully written yet and hence some of the tests may not pass
 
 After building, you have to push the broker app to Cloud Foundry
 
@@ -66,7 +71,7 @@ applications:
 ```
 * cf push
 
-_Note down the route url_
+IMPORTANT: Note down the route url
 
 === Create :: Service Broker
 
@@ -82,7 +87,7 @@ cf service-brokers
 ```
 image:images/list_sb.png[service-broker]
 
-_You should be able to see the `mongodb` service broker_
+TIP: You should be able to see the `mongodb` service broker
 
 * Enable service access
 ```
@@ -104,7 +109,7 @@ cf marketplace
 ```
 image:images/marketplace.png[marketplace]
 
-_You should be able to see the `mongodb` service_
+TIP: You should be able to see the `mongodb` service
 
 * Create mongodb service
 ```
@@ -148,5 +153,4 @@ applications:
 ```
 cf push
 ```
-
-Verify the results in a web browser
+TIP: Verify the results in a web browser
