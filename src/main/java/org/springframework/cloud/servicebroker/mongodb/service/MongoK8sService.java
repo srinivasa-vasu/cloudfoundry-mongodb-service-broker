@@ -17,7 +17,7 @@ import javax.net.ssl.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.servicebroker.mongodb.model.ServiceObjectInstance;
+import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceParams;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -92,7 +92,7 @@ public class MongoK8sService {
 		restTemplate.setErrorHandler(new NoErrorsResponseErrorHandler());
 	}
 
-	boolean createK8sObjects(ServiceObjectInstance serviceObj) throws IOException,
+	boolean createK8sObjects(ServiceInstanceParams serviceObj) throws IOException,
 			InterruptedException, TemplateException {
 		final HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", "Bearer " + serviceObj.getAccessToken());
@@ -119,7 +119,7 @@ public class MongoK8sService {
 		return true;
 	}
 
-	void deleteK8sObjects(ServiceObjectInstance serviceObj) {
+	void deleteK8sObjects(ServiceInstanceParams serviceObj) {
 		final HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", "Bearer " + serviceObj.getAccessToken());
 		headers.set("Content-Type", CONTENT_TYPE);
@@ -132,8 +132,8 @@ public class MongoK8sService {
 	}
 
 	private ResponseEntity<String> createObject(K8sObject obj, HttpHeaders headers,
-			ServiceObjectInstance serviceObj) throws IOException, TemplateException {
-		ResponseEntity<String> result = restTemplate.exchange(
+			ServiceInstanceParams serviceObj) throws IOException, TemplateException {
+	    ResponseEntity<String> result = restTemplate.exchange(
 				getEndpoint(obj, serviceObj, false), HttpMethod.POST,
 				new HttpEntity<>(
 						FreeMarkerTemplateUtils.processTemplateIntoString(
@@ -148,7 +148,7 @@ public class MongoK8sService {
 	}
 
 	private void deleteObjectIfExists(K8sObject obj, HttpHeaders headers,
-			ServiceObjectInstance serviceObj) {
+			ServiceInstanceParams serviceObj) {
 		HttpEntity<String> entity = new HttpEntity<>(null, headers);
 		ResponseEntity<String> result = restTemplate.exchange(
 				getEndpoint(obj, serviceObj, true), HttpMethod.DELETE, entity,
@@ -159,7 +159,7 @@ public class MongoK8sService {
 		}
 	}
 
-	private String getEndpoint(K8sObject obj, ServiceObjectInstance serviceObj,
+	private String getEndpoint(K8sObject obj, ServiceInstanceParams serviceObj,
 			boolean delete) {
 		String endpoint = "";
 		switch (obj) {
@@ -173,7 +173,7 @@ public class MongoK8sService {
 		case DISCOVERY_SERVICE:
 			endpoint = serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace()
 					+ "/services";
-			if (delete) {
+            if (delete) {
 				endpoint = endpoint + "/" + serviceObj.getName() + "-discovery";
 			}
 			break;
@@ -195,7 +195,7 @@ public class MongoK8sService {
 		return endpoint;
 	}
 
-	private boolean actionStatus(HttpHeaders headers, ServiceObjectInstance serviceObj)
+	private boolean actionStatus(HttpHeaders headers, ServiceInstanceParams serviceObj)
 			throws IOException, InterruptedException {
 		int threshold = 3;
 		boolean status = true;

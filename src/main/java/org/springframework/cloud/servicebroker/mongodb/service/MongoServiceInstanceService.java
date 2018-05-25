@@ -19,7 +19,7 @@ import org.springframework.cloud.servicebroker.model.*;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
 import org.springframework.cloud.servicebroker.mongodb.exception.MongoServiceException;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstance;
-import org.springframework.cloud.servicebroker.mongodb.model.ServiceObjectInstance;
+import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceParams;
 import org.springframework.cloud.servicebroker.mongodb.repository.MongoServiceInstanceRepository;
 import org.springframework.cloud.servicebroker.service.ServiceInstanceService;
 import org.springframework.stereotype.Service;
@@ -52,7 +52,7 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 
 	private final Map<String, OperationState> operationStatus = new HashMap<>();
 
-	private final Map<String, ServiceObjectInstance> serviceParams = new HashMap<>();
+	private final Map<String, ServiceInstanceParams> serviceParams = new HashMap<>();
 
 	@Autowired
 	public MongoServiceInstanceService(MongoAdminService mongo,
@@ -76,7 +76,7 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 							+ request.getServiceInstanceId());
 				}
 				ServiceInstance instance = new ServiceInstance(request);
-				ServiceObjectInstance objInstance = new ServiceObjectInstance(request,
+				ServiceInstanceParams objInstance = new ServiceInstanceParams(request,
 						config);
 				serviceParams.put(request.getServiceInstanceId(), objInstance);
 				if (k8sService.createK8sObjects(objInstance)) {
@@ -110,6 +110,8 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 					}
 				}
 				else {
+				    // remove objects if got created partially
+				    k8sService.deleteK8sObjects(objInstance);
 					throw new MongoServiceException("unable to create mongo k8s objects");
 				}
 			}

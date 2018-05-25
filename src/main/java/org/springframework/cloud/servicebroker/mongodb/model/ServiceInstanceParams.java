@@ -4,7 +4,7 @@ import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
 import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
 
-public class ServiceObjectInstance {
+public class ServiceInstanceParams {
 
 	enum ObjVars {
 		TOKEN("token"), NAMESPACE("namespace"), SERVICE_NAME("service_name",
@@ -46,12 +46,12 @@ public class ServiceObjectInstance {
 	private long serviceTimeout = 30;
 
 	/**
-	 * Create a ServiceObjectInstance from a create request. If fields are not present in
+	 * Create a ServiceInstanceParams from a create request. If fields are not present in
 	 * the request they will remain null in the ServiceInstance.
 	 * @param request containing details of ServiceInstance
 	 */
-	public ServiceObjectInstance(CreateServiceInstanceRequest request,
-			MongoConfig config) {
+	public ServiceInstanceParams(CreateServiceInstanceRequest request,
+                                 MongoConfig config) {
 		initialize(config);
 		populate(request);
 		validateInputParams(request);
@@ -62,7 +62,9 @@ public class ServiceObjectInstance {
 		setNamespace(config.getNamespace());
 		setUrl(config.getMasterUrl());
 		setName(config.getName());
-		setExposePort(config.getPort());
+		if (config.getPort() > 0) {
+			setExposePort(config.getPort());
+		}
 		setServiceTimeout(config.getServiceTimeout());
 	}
 
@@ -159,20 +161,20 @@ public class ServiceObjectInstance {
 		this.exposePort = exposePort;
 	}
 
-	private int getExposePort() {
+	public int getExposePort() {
 		return exposePort;
 	}
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("ServiceObjectInstance{");
-        sb.append("namespace='").append(namespace).append('\'');
-        sb.append(", name='").append(name).append('\'');
-        sb.append(", accessToken='").append(accessToken).append('\'');
-        sb.append(", url='").append(url).append('\'');
-        sb.append(", exposePort=").append(exposePort);
-        sb.append(", serviceTimeout=").append(serviceTimeout);
-        sb.append('}');
-        return sb.toString();
-    }
+	@Override
+	public String toString() {
+		final StringBuilder sb = new StringBuilder("ServiceInstanceParams{");
+		sb.append("namespace='").append(namespace).append('\'');
+		sb.append(", name='").append(name).append('\'');
+		sb.append(", accessToken='").append(accessToken).append('\'');
+		sb.append(", url='").append(url).append('\'');
+		sb.append(", exposePort=").append(exposePort);
+		sb.append(", serviceTimeout=").append(serviceTimeout);
+		sb.append('}');
+		return sb.toString();
+	}
 }

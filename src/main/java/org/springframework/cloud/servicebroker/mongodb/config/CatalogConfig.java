@@ -19,13 +19,13 @@ public class CatalogConfig {
 	public Catalog catalog() {
 		return new Catalog(Collections.singletonList(
 				new ServiceDefinition(
-						"mongodb-on-demand-service-broker",
-						"mongodb",
+						"mongodb01-on-demand-service-broker",
+						"mongodb01",
 						"A PKS MongoDB on-demand service broker implementation",
 						true,
 						false,
 						Collections.singletonList(
-								new Plan("mongo-plan",
+								new Plan("mongo01-plan",
 										"default",
 										"This is a default mongo plan.  All services are created equally.",
 										getPlanMetadata())),

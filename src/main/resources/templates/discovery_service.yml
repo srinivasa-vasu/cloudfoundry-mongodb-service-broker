@@ -9,6 +9,6 @@ spec:
     - name: mongodb
       port: 8080
       targetPort: 27017
-      nodePort: 31000
+      nodePort: ${exposePort?c}
   selector:
     app: ${name}
