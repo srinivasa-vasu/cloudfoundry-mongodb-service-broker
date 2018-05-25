@@ -3,3 +3,5 @@ mongodb:
   port: 31000
   username: admin
   password: password
+service:
+  id: mongodb

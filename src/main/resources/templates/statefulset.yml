@@ -5,7 +5,7 @@ metadata:
   namespace: ${namespace}
 spec:
   serviceName: ${name}-service
-  replicas: 1
+  replicas: ${replicas?c!1}
   selector:
     matchLabels:
       app: ${name}
