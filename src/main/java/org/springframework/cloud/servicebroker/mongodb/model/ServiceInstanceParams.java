@@ -10,6 +10,9 @@ import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
 import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 public class ServiceInstanceParams {
 
 	enum ObjVars {
@@ -44,9 +47,17 @@ public class ServiceInstanceParams {
 
 	}
 
+	@JsonSerialize
+	@JsonProperty("namespace")
 	private String namespace;
+	@JsonSerialize
+	@JsonProperty("service_name")
 	private String name;
+	@JsonSerialize
+	@JsonProperty("access_token")
 	private String accessToken;
+	@JsonSerialize
+	@JsonProperty("master_url")
 	private String url;
 	private int exposePort = 31000;
 	private long serviceTimeout = 30;
@@ -64,6 +75,22 @@ public class ServiceInstanceParams {
 		populate(request);
 		populatePlanParams(request);
 		validateInputParams(request);
+	}
+
+	public ServiceInstanceParams(String namespace, String name, String accessToken,
+			String url, int exposePort, long serviceTimeout, String storage,
+			int replicas) {
+		this.namespace = namespace;
+		this.name = name;
+		this.accessToken = accessToken;
+		this.url = url;
+		this.exposePort = exposePort;
+		this.serviceTimeout = serviceTimeout;
+		this.storage = storage;
+		this.replicas = replicas;
+	}
+
+	public ServiceInstanceParams() {
 	}
 
 	private void initialize(MongoConfig config) {

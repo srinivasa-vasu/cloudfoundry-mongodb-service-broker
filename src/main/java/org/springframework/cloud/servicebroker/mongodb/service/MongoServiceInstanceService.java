@@ -52,8 +52,6 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 
 	private final Map<String, OperationState> operationStatus = new HashMap<>();
 
-	private final Map<String, ServiceInstanceParams> serviceParams = new HashMap<>();
-
 	@Autowired
 	public MongoServiceInstanceService(MongoAdminService mongo,
 			MongoServiceInstanceRepository repository, MongoK8sService k8sService,
@@ -75,10 +73,9 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 					LOGGER.debug("Initializing service instance id: "
 							+ request.getServiceInstanceId());
 				}
-				ServiceInstance instance = new ServiceInstance(request);
 				ServiceInstanceParams objInstance = new ServiceInstanceParams(request,
 						config);
-				serviceParams.put(request.getServiceInstanceId(), objInstance);
+				ServiceInstance instance = new ServiceInstance(request, objInstance);
 				if (k8sService.createK8sObjects(objInstance)) {
 					if (LOGGER.isDebugEnabled()) {
 						LOGGER.debug("K8s mongo objects created for instance id: "
@@ -110,8 +107,8 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 					}
 				}
 				else {
-				    // remove objects if got created partially
-				    k8sService.deleteK8sObjects(objInstance);
+					// remove objects if got created partially
+					k8sService.deleteK8sObjects(objInstance);
 					throw new MongoServiceException("unable to create mongo k8s objects");
 				}
 			}
@@ -153,7 +150,7 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 				}
 				mongo.deleteDatabase(instanceId);
 				repository.delete(instanceId);
-				k8sService.deleteK8sObjects(serviceParams.remove(instanceId));
+				k8sService.deleteK8sObjects(instance.getInstanceParams());
 				operationStatus.put(instanceId, SUCCEEDED);
 			}
 			catch (Exception ex) {

@@ -1,13 +1,14 @@
 package org.springframework.cloud.servicebroker.mongodb.model;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import java.util.Map;
+
 import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
 import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
 import org.springframework.cloud.servicebroker.model.UpdateServiceInstanceRequest;
 
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * An instance of a ServiceDefinition.
@@ -45,23 +46,29 @@ public class ServiceInstance {
 	@JsonProperty("parameters")
 	private Map<String, Object> parameters;
 
-	@SuppressWarnings("unused")
-	private ServiceInstance() {}
+	@JsonSerialize
+	@JsonProperty("instance_params")
+	private ServiceInstanceParams instanceParams;
 
-	public ServiceInstance(String serviceInstanceId, String serviceDefinitionId, String planId,
-						   String organizationGuid, String spaceGuid, String dashboardUrl) {
+	@SuppressWarnings("unused")
+	private ServiceInstance() {
+	}
+
+	public ServiceInstance(String serviceInstanceId, String serviceDefinitionId,
+			String planId, String organizationGuid, String spaceGuid, String dashboardUrl,
+			ServiceInstanceParams params) {
 		this.id = serviceInstanceId;
 		this.serviceDefinitionId = serviceDefinitionId;
 		this.planId = planId;
 		this.organizationGuid = organizationGuid;
 		this.spaceGuid = spaceGuid;
 		this.dashboardUrl = dashboardUrl;
+		this.instanceParams = params;
 	}
 
 	/**
-	 * Create a ServiceInstance from a create request. If fields
-	 * are not present in the request they will remain null in the
-	 * ServiceInstance.
+	 * Create a ServiceInstance from a create request. If fields are not present in the
+	 * request they will remain null in the ServiceInstance.
 	 * @param request containing details of ServiceInstance
 	 */
 	public ServiceInstance(CreateServiceInstanceRequest request) {
@@ -73,10 +80,20 @@ public class ServiceInstance {
 		this.parameters = request.getParameters();
 	}
 
+	public ServiceInstance(CreateServiceInstanceRequest request,
+			ServiceInstanceParams params) {
+		this.serviceDefinitionId = request.getServiceDefinitionId();
+		this.planId = request.getPlanId();
+		this.organizationGuid = request.getOrganizationGuid();
+		this.spaceGuid = request.getSpaceGuid();
+		this.id = request.getServiceInstanceId();
+		this.parameters = request.getParameters();
+		this.instanceParams = params;
+	}
+
 	/**
-	 * Create a ServiceInstance from a delete request. If fields
-	 * are not present in the request they will remain null in the
-	 * ServiceInstance.
+	 * Create a ServiceInstance from a delete request. If fields are not present in the
+	 * request they will remain null in the ServiceInstance.
 	 * @param request containing details of ServiceInstance
 	 */
 	public ServiceInstance(DeleteServiceInstanceRequest request) {
@@ -86,9 +103,8 @@ public class ServiceInstance {
 	}
 
 	/**
-	 * Create a service instance from an update request. If fields
-	 * are not present in the request they will remain null in the
-	 * ServiceInstance.
+	 * Create a service instance from an update request. If fields are not present in the
+	 * request they will remain null in the ServiceInstance.
 	 * @param request containing details of ServiceInstance
 	 */
 	public ServiceInstance(UpdateServiceInstanceRequest request) {
@@ -118,6 +134,10 @@ public class ServiceInstance {
 
 	public String getDashboardUrl() {
 		return dashboardUrl;
+	}
+
+	public ServiceInstanceParams getInstanceParams() {
+		return instanceParams;
 	}
 
 	public ServiceInstance and() {
