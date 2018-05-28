@@ -123,6 +123,7 @@ _Replace placeholders `<>` with actual values_
 * `token`: user access token from kube config file
 
 `create-service` will provision mongodb database on the given kubernetes cluster asynchronously. You should get a response like,
+
 image:images/create-service.png[create-service]
 
 * Check service creation status
@@ -134,6 +135,8 @@ image:images/create-service-status.png[create-service-status]
 Within few seconds, status should be successful.
 
 image:images/create-service-success.png[create-service-success]
+
+TIP: Few other paid plan implementations are also available - `gold` and `platinum`. All the plans enforce storage and replica specifications
 
 === Bind :: Service
 

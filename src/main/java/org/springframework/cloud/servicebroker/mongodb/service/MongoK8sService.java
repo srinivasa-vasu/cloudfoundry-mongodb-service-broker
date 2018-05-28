@@ -40,9 +40,11 @@ public class MongoK8sService {
 
 	enum K8sObject {
 
-		DISCOVERY_SERVICE("discovery_service.yml"), HEADLESS_SERVICE(
-				"headless_service.yml"), STATEFULSET(
-						"statefulset.yml"), CONFIGMAP("configmap.yml");
+		DISCOVERY_SERVICE("discovery_service.yml"),
+		HEADLESS_SERVICE("headless_service.yml"),
+		STATEFULSET("statefulset.yml"),
+		CONFIGMAP("configmap.yml"),
+		STORAGE_CLASS("storage_gcp.yml");
 
 		private String fileName;
 		private static final List<K8sObject> orderedList = new ArrayList<>();
@@ -83,6 +85,7 @@ public class MongoK8sService {
 	private static final String CONTENT_TYPE = "application/yaml";
 	private static final String BASE_URL = "/api/v1/namespaces/";
 	private static final String BASE_URL_SF = "/apis/apps/v1/namespaces/";
+	private static final String BASE_URL_STORAGE = "/apis/storage.k8s.io/v1/storageclasses";
 	private static final List<String> STATUS_CODES = Arrays.asList("200", "201");
 
 	public MongoK8sService(Configuration config) {
@@ -163,6 +166,12 @@ public class MongoK8sService {
 			boolean delete) {
 		String endpoint = "";
 		switch (obj) {
+		case STORAGE_CLASS:
+			endpoint = serviceObj.getUrl() + BASE_URL_STORAGE;
+			if (delete) {
+				endpoint = endpoint + "/" + serviceObj.getName() + "-storage";
+			}
+			break;
 		case CONFIGMAP:
 			endpoint = serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace()
 					+ "/configmaps";

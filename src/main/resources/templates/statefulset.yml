@@ -106,7 +106,7 @@ spec:
         name: datadir
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: ci-storage
+        storageClassName: ${name}-storage
         resources:
           requests:
             storage: ${storage!"128Mi"}
