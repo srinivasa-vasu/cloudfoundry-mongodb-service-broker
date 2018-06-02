@@ -72,8 +72,8 @@ public class MongoK8sService {
 		static List<K8sObject> getReverseOrderedList() {
 			if (reverseOrderedList.isEmpty()) {
 				reverseOrderedList.addAll(getOrderedList());
-			}
-			Collections.reverse(reverseOrderedList);
+                Collections.reverse(reverseOrderedList);
+            }
 			return reverseOrderedList;
 		}
 
