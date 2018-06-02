@@ -5,6 +5,7 @@ import static org.springframework.cloud.servicebroker.model.OperationState.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,13 +18,22 @@ import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
 import org.springframework.cloud.servicebroker.exception.ServiceInstanceDoesNotExistException;
 import org.springframework.cloud.servicebroker.model.*;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
+import org.springframework.cloud.servicebroker.mongodb.dto.ServiceKey;
+import org.springframework.cloud.servicebroker.mongodb.dto.ServiceList;
 import org.springframework.cloud.servicebroker.mongodb.exception.MongoServiceException;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstance;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceParams;
 import org.springframework.cloud.servicebroker.mongodb.repository.MongoServiceInstanceRepository;
 import org.springframework.cloud.servicebroker.service.ServiceInstanceService;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mongodb.client.MongoDatabase;
 
 import freemarker.template.TemplateException;
@@ -45,6 +55,8 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 
 	private MongoConfig config;
 
+	private APIService apiService;
+
 	private static final Logger LOGGER = LoggerFactory
 			.getLogger(MongoServiceInstanceService.class);
 
@@ -55,11 +67,12 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 	@Autowired
 	public MongoServiceInstanceService(MongoAdminService mongo,
 			MongoServiceInstanceRepository repository, MongoK8sService k8sService,
-			MongoConfig config) {
+			MongoConfig config, APIService apiService) {
 		this.mongo = mongo;
 		this.repository = repository;
 		this.k8sService = k8sService;
 		this.config = config;
+		this.apiService = apiService;
 	}
 
 	@Override
@@ -75,6 +88,12 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 				}
 				ServiceInstanceParams objInstance = new ServiceInstanceParams(request,
 						config);
+				if (Optional.ofNullable(objInstance.getClusterName()).isPresent()
+						&& Optional.ofNullable(objInstance.getIdentity()).isPresent()) {
+					ServiceKey key = getClusterParams(objInstance, request);
+					objInstance.populateServiceParams(key);
+				}
+				objInstance.validateInputParams(request);
 				ServiceInstance instance = new ServiceInstance(request, objInstance);
 				if (k8sService.createK8sObjects(objInstance)) {
 					if (LOGGER.isDebugEnabled()) {
@@ -120,6 +139,36 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 			}
 		}));
 		return new CreateServiceInstanceResponse().withAsync(true);
+	}
+
+	private ServiceKey getClusterParams(ServiceInstanceParams objInstance,
+			CreateServiceInstanceRequest request) {
+		ServiceKey key = null;
+		ObjectMapper mapper = new ObjectMapper();
+		String apiEndPoint = "https://" + request.getApiInfoLocation().substring(0,
+				request.getApiInfoLocation().indexOf("/"));
+		String serviceListAPI = apiEndPoint + "/v2/service_instances?q=name:"
+				+ objInstance.getClusterName();
+		String createServiceKeyAPI = apiEndPoint + "/v2/service_keys";
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.set("Authorization", "Bearer " + objInstance.getIdentity());
+		Optional<ServiceList> serviceObj = Optional
+				.ofNullable(
+						apiService
+								.exchange(serviceListAPI, HttpMethod.GET,
+										new HttpEntity(headers), ServiceList.class)
+								.getBody());
+		if (serviceObj.isPresent() && serviceObj.get().getTotalResults() > 0) {
+			JsonNode body = mapper.createObjectNode();
+			((ObjectNode) body).put("service_instance_guid",
+					serviceObj.get().getResources().get(0).getMetadata().getGuid());
+			((ObjectNode) body).put("name", "key-" + System.currentTimeMillis());
+			key = apiService.exchange(createServiceKeyAPI, HttpMethod.POST,
+					new HttpEntity<Object>(body.toString(), headers), ServiceKey.class)
+					.getBody();
+		}
+		return key;
 	}
 
 	@Override
@@ -170,7 +219,6 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 		if (instance == null) {
 			throw new ServiceInstanceDoesNotExistException(instanceId);
 		}
-
 		repository.delete(instanceId);
 		ServiceInstance updatedInstance = new ServiceInstance(request);
 		repository.save(updatedInstance);

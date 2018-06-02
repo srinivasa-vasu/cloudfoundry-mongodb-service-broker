@@ -8,7 +8,10 @@ import java.util.Map;
 
 import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
 import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.ServiceBrokerRequest;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
+import org.springframework.cloud.servicebroker.mongodb.dto.ServiceKey;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -18,7 +21,8 @@ public class ServiceInstanceParams {
 	enum ObjVars {
 		TOKEN("token"), NAMESPACE("namespace"), SERVICE_NAME("service_name",
 				"servicename"), MASTER_URL("master_url", "masterurl"), EXPOSE_PORT(
-						"expose_port", "exposeport"), DEFAULT("");
+						"expose_port", "exposeport"), CLUSTER_NAME("cluster_name",
+								"clustername"), IDENTITY("identity"), DEFAULT("");
 
 		private String[] keys;
 
@@ -64,6 +68,16 @@ public class ServiceInstanceParams {
 	private String storage;
 	private int replicas = 1;
 
+	@JsonSerialize
+	@JsonProperty("cluster_name")
+	private String clusterName;
+    @JsonProperty("identity")
+	private String identity;
+    @JsonProperty("service_key")
+	private String serviceKey;
+
+	private boolean autoMode;
+
 	/**
 	 * Create a ServiceInstanceParams from a create request. If fields are not present in
 	 * the request they will remain null in the ServiceInstance.
@@ -74,7 +88,6 @@ public class ServiceInstanceParams {
 		initialize(config);
 		populate(request);
 		populatePlanParams(request);
-		validateInputParams(request);
 	}
 
 	public ServiceInstanceParams(String namespace, String name, String accessToken,
@@ -107,6 +120,12 @@ public class ServiceInstanceParams {
 	private void populate(CreateServiceInstanceRequest request) {
 		for (String key : request.getParameters().keySet()) {
 			switch (ObjVars.getObj(key)) {
+			case CLUSTER_NAME:
+				setClusterName((String) request.getParameters().get(key));
+				break;
+			case IDENTITY:
+				setIdentity((String) request.getParameters().get(key));
+				break;
 			case TOKEN:
 				setAccessToken((String) request.getParameters().get(key));
 				break;
@@ -141,7 +160,15 @@ public class ServiceInstanceParams {
 						}));
 	}
 
-	private void validateInputParams(CreateServiceInstanceRequest request) {
+	public void populateServiceParams(ServiceKey serviceKey) {
+		setUrl(serviceKey.getEntity().getCredentials().getMasterUrl());
+		setAccessToken(serviceKey.getEntity().getCredentials().getToken());
+		setNamespace("ns-" + System.currentTimeMillis());
+		setServiceKey(serviceKey.getMetadata().getGuid());
+		setAutoMode(true);
+	}
+
+	public void validateInputParams(CreateServiceInstanceRequest request) {
 		String errorMsg = null;
 		if (isEmpty(getAccessToken())) {
 			errorMsg = ObjVars.TOKEN.getInput();
@@ -149,9 +176,9 @@ public class ServiceInstanceParams {
 		if (isEmpty(getUrl())) {
 			errorMsg = ObjVars.MASTER_URL.getInput();
 		}
-		if (isEmpty(getName())) {
-			errorMsg = ObjVars.SERVICE_NAME.getInput();
-		}
+//		if (isEmpty(getName())) {
+//			errorMsg = ObjVars.SERVICE_NAME.getInput();
+//		}
 		if (isEmpty(getNamespace())) {
 			errorMsg = ObjVars.NAMESPACE.getInput();
 		}
@@ -174,6 +201,9 @@ public class ServiceInstanceParams {
 	}
 
 	public String getName() {
+		if (name == null || name.isEmpty()) {
+			name = "mongo-" + System.currentTimeMillis();
+		}
 		return name;
 	}
 
@@ -229,7 +259,39 @@ public class ServiceInstanceParams {
 		this.replicas = replicas;
 	}
 
-	@Override
+	public String getClusterName() {
+		return clusterName;
+	}
+
+	public void setClusterName(String clusterName) {
+		this.clusterName = clusterName;
+	}
+
+	public String getIdentity() {
+		return identity;
+	}
+
+	public void setIdentity(String identity) {
+		this.identity = identity;
+	}
+
+    public boolean isAutoMode() {
+        return autoMode;
+    }
+
+    public void setAutoMode(boolean autoMode) {
+        this.autoMode = autoMode;
+    }
+
+    public String getServiceKey() {
+        return serviceKey;
+    }
+
+    public void setServiceKey(String serviceKey) {
+        this.serviceKey = serviceKey;
+    }
+
+    @Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder("ServiceInstanceParams{");
 		sb.append("namespace='").append(namespace).append('\'');
@@ -240,6 +302,8 @@ public class ServiceInstanceParams {
 		sb.append(", serviceTimeout=").append(serviceTimeout);
 		sb.append(", storage='").append(storage).append('\'');
 		sb.append(", replicas=").append(replicas);
+		sb.append(", clusterName='").append(clusterName).append('\'');
+		sb.append(", identity='").append(identity).append('\'');
 		sb.append('}');
 		return sb.toString();
 	}
