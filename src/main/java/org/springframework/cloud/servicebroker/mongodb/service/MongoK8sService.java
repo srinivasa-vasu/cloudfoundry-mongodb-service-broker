@@ -40,11 +40,9 @@ public class MongoK8sService {
 
 	enum K8sObject {
 
-		DISCOVERY_SERVICE("discovery_service.yml"),
-		HEADLESS_SERVICE("headless_service.yml"),
-		STATEFULSET("statefulset.yml"),
-		CONFIGMAP("configmap.yml"),
-		STORAGE_CLASS("storage_gcp.yml");
+		DISCOVERY_SERVICE("discovery_service.yml"), HEADLESS_SERVICE(
+				"headless_service.yml"), STATEFULSET("statefulset.yml"), CONFIGMAP(
+						"configmap.yml"), STORAGE_CLASS("storage_gcp.yml");
 
 		private String fileName;
 		private static final List<K8sObject> orderedList = new ArrayList<>();
@@ -72,8 +70,8 @@ public class MongoK8sService {
 		static List<K8sObject> getReverseOrderedList() {
 			if (reverseOrderedList.isEmpty()) {
 				reverseOrderedList.addAll(getOrderedList());
-                Collections.reverse(reverseOrderedList);
-            }
+				Collections.reverse(reverseOrderedList);
+			}
 			return reverseOrderedList;
 		}
 
@@ -95,8 +93,8 @@ public class MongoK8sService {
 		restTemplate.setErrorHandler(new NoErrorsResponseErrorHandler());
 	}
 
-	boolean createK8sObjects(ServiceInstanceParams serviceObj) throws IOException,
-			InterruptedException, TemplateException {
+	boolean createK8sObjects(ServiceInstanceParams serviceObj)
+			throws IOException, InterruptedException, TemplateException {
 		final HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", "Bearer " + serviceObj.getAccessToken());
 		headers.set("Content-Type", CONTENT_TYPE);
@@ -116,8 +114,9 @@ public class MongoK8sService {
 			}
 		}
 		if (!actionStatus(headers, serviceObj)) {
-		    LOGGER.error("POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
-		    return false;
+			LOGGER.error(
+					"POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
+			return false;
 		}
 		return true;
 	}
@@ -136,7 +135,7 @@ public class MongoK8sService {
 
 	private ResponseEntity<String> createObject(K8sObject obj, HttpHeaders headers,
 			ServiceInstanceParams serviceObj) throws IOException, TemplateException {
-	    ResponseEntity<String> result = restTemplate.exchange(
+		ResponseEntity<String> result = restTemplate.exchange(
 				getEndpoint(obj, serviceObj, false), HttpMethod.POST,
 				new HttpEntity<>(
 						FreeMarkerTemplateUtils.processTemplateIntoString(
@@ -182,7 +181,7 @@ public class MongoK8sService {
 		case DISCOVERY_SERVICE:
 			endpoint = serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace()
 					+ "/services";
-            if (delete) {
+			if (delete) {
 				endpoint = endpoint + "/" + serviceObj.getName() + "-discovery";
 			}
 			break;
@@ -210,11 +209,11 @@ public class MongoK8sService {
 		boolean status = true;
 		HttpEntity<String> entity = new HttpEntity<>(null, headers);
 		ObjectMapper mapper = new ObjectMapper();
+		String podAPI = serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace()
+				+ "/pods/" + serviceObj.getName() + "-0/status";
+		ResponseEntity<String> result;
 		while (true) {
-			ResponseEntity<String> result = restTemplate.exchange(
-					serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace() + "/pods/"
-							+ serviceObj.getName() + "-0/status",
-					HttpMethod.GET, entity, String.class);
+			result = restTemplate.exchange(podAPI, HttpMethod.GET, entity, String.class);
 			JsonNode node = mapper.readTree(result.getBody());
 			if (node.get("status").get("phase").textValue().equalsIgnoreCase("Running")) {
 				break;
