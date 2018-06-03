@@ -149,6 +149,7 @@ public class CatalogConfig {
                 "https://github.com/srinivasa-vasu/cloudfoundry-service-broker");
         sdMetadata.put("supportUrl",
                 "https://github.com/srinivasa-vasu/cloudfoundry-service-broker");
+        sdMetadata.put("shareable", true);
         return sdMetadata;
     }
 

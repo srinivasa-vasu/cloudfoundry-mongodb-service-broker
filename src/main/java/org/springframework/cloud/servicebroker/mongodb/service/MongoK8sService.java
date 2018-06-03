@@ -30,12 +30,10 @@ public class MongoK8sService {
 
 	enum K8sObject {
 
-		DISCOVERY_SERVICE("discovery_service.yml"),
-        HEADLESS_SERVICE("headless_service.yml"),
-        STATEFULSET("statefulset.yml"), 
-        CONFIGMAP("configmap.yml"),
-        STORAGE_CLASS("storage_gcp.yml"),
-        NAMESPACE("namespace.yml");
+		DISCOVERY_SERVICE("discovery_service.yml"), HEADLESS_SERVICE(
+				"headless_service.yml"), STATEFULSET("statefulset.yml"), CONFIGMAP(
+						"configmap.yml"), STORAGE_CLASS(
+								"storage_gcp.yml"), NAMESPACE("namespace.yml");
 
 		private String fileName;
 		private static final List<K8sObject> orderedList = new ArrayList<>();
@@ -104,14 +102,16 @@ public class MongoK8sService {
 				return false;
 			}
 		}
-		if (!actionStatus(headers, serviceObj)) {
-			LOGGER.error("POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
+		if (!actionStatus(headers, serviceObj, true)) {
+			LOGGER.error(
+					"POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
 			return false;
 		}
 		return true;
 	}
 
-	void deleteK8sObjects(ServiceInstanceParams serviceObj) {
+	void deleteK8sObjects(ServiceInstanceParams serviceObj)
+			throws IOException, InterruptedException {
 		final HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", "Bearer " + serviceObj.getAccessToken());
 		headers.set("Content-Type", CONTENT_TYPE);
@@ -121,6 +121,11 @@ public class MongoK8sService {
 		for (K8sObject obj : K8sObject.getOrderedList()) {
 			deleteObjectIfExists(obj, headers, serviceObj);
 		}
+		if (!actionStatus(headers, serviceObj, false)) {
+			LOGGER.error(
+					"Object deletion has failed or taking longer time to complete. Exceeded the threshold wait time");
+		}
+
 	}
 
 	private ResponseEntity<String> createObject(K8sObject obj, HttpHeaders headers,
@@ -212,29 +217,40 @@ public class MongoK8sService {
 		return endpoint;
 	}
 
-	private boolean actionStatus(HttpHeaders headers, ServiceInstanceParams serviceObj)
-			throws IOException, InterruptedException {
+	private boolean actionStatus(HttpHeaders headers, ServiceInstanceParams serviceObj,
+			boolean operation) throws IOException, InterruptedException {
 		int threshold = 3;
-		boolean status = true;
+		boolean status = false;
+		boolean exit = false;
 		HttpEntity<String> entity = new HttpEntity<>(null, headers);
 		ObjectMapper mapper = new ObjectMapper();
-		while (true) {
-			ResponseEntity<String> result = restTemplate.exchange(
-					serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace() + "/pods/"
-							+ serviceObj.getName() + "-0/status",
-					HttpMethod.GET, entity, String.class);
-			JsonNode node = mapper.readTree(result.getBody());
-			if (node.get("status").get("phase").textValue().equalsIgnoreCase("Running")) {
-				break;
-			}
+		String podAPI = serviceObj.getUrl() + BASE_URL + serviceObj.getNamespace()
+				+ "/pods/" + serviceObj.getName() + "-0/status";
+		ResponseEntity<String> result;
+		do {
 			if (--threshold >= 0) {
+				result = restTemplate.exchange(podAPI, HttpMethod.GET, entity,
+						String.class);
+				if (operation && result.getStatusCode().is2xxSuccessful()) {
+					JsonNode node = mapper.readTree(result.getBody());
+					if (node.get("status").get("phase").textValue()
+							.equalsIgnoreCase("Running")) {
+						status = true;
+					}
+				}
+				else if (!operation && !result.getStatusCode().is2xxSuccessful()) {
+					status = true;
+				}
+				else {
+					// do nothing
+				}
 				TimeUnit.SECONDS.sleep(serviceObj.getServiceTimeout());
 			}
 			else {
-				status = false;
-				break;
+				exit = true;
 			}
 		}
+		while (!status && !exit);
 		return status;
 	}
 }

@@ -255,9 +255,11 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 				}
 				operationStatus.put(instanceId, SUCCEEDED);
 			}
-			catch (Exception ex) {
+			catch (IOException | InterruptedException ex) {
 				operationStatus.put(instanceId, FAILED);
-				throw ex;
+				throw new ServiceBrokerException(
+						"Failed to delete some objects of DB instance: " + ex.getMessage()
+								+ ": " + request.getServiceInstanceId(), ex);
 			}
 		}));
 		return new DeleteServiceInstanceResponse().withAsync(true);
