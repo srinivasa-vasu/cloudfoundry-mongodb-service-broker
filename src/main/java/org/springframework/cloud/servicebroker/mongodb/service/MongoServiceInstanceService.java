@@ -1,8 +1,11 @@
 package org.springframework.cloud.servicebroker.mongodb.service;
 
 import static org.springframework.cloud.servicebroker.model.OperationState.*;
+import static org.springframework.http.HttpMethod.DELETE;
+import static org.springframework.http.HttpMethod.POST;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -11,6 +14,7 @@ import java.util.concurrent.Executors;
 
 import javax.annotation.PreDestroy;
 
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +29,10 @@ import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstance;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceParams;
 import org.springframework.cloud.servicebroker.mongodb.repository.MongoServiceInstanceRepository;
 import org.springframework.cloud.servicebroker.service.ServiceInstanceService;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -64,6 +67,9 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 
 	private final Map<String, OperationState> operationStatus = new HashMap<>();
 
+	private static final String SERVICE_INSTANCE = "/v2/service_instances";
+	private static final String SERVICE_KEY = "/v2/service_keys";
+
 	@Autowired
 	public MongoServiceInstanceService(MongoAdminService mongo,
 			MongoServiceInstanceRepository repository, MongoK8sService k8sService,
@@ -86,11 +92,11 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 					LOGGER.debug("Initializing service instance id: "
 							+ request.getServiceInstanceId());
 				}
-				ServiceInstanceParams objInstance = new ServiceInstanceParams(request,
+				ServiceInstanceParams objInstance = getServiceInstanceParams(request,
 						config);
 				if (Optional.ofNullable(objInstance.getClusterName()).isPresent()
 						&& Optional.ofNullable(objInstance.getIdentity()).isPresent()) {
-					ServiceKey key = getClusterParams(objInstance, request);
+					ServiceKey key = processClusterParams(objInstance);
 					objInstance.populateServiceParams(key);
 				}
 				objInstance.validateInputParams(request);
@@ -141,32 +147,76 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 		return new CreateServiceInstanceResponse().withAsync(true);
 	}
 
-	private ServiceKey getClusterParams(ServiceInstanceParams objInstance,
-			CreateServiceInstanceRequest request) {
-		ServiceKey key = null;
-		ObjectMapper mapper = new ObjectMapper();
-		String apiEndPoint = "https://" + request.getApiInfoLocation().substring(0,
-				request.getApiInfoLocation().indexOf("/"));
-		String serviceListAPI = apiEndPoint + "/v2/service_instances?q=name:"
-				+ objInstance.getClusterName();
-		String createServiceKeyAPI = apiEndPoint + "/v2/service_keys";
+	private ServiceInstanceParams getServiceInstanceParams(
+			CreateServiceInstanceRequest request, MongoConfig config) {
+		ServiceInstanceParams instance = new ServiceInstanceParams(request, config);
+		if (Optional.ofNullable(config.getCfUser()).isPresent()
+				&& Optional.ofNullable(config.getCfPassword()).isPresent()) {
+			Optional<String> accessToken = Optional
+					.ofNullable(getCfAccessToken(instance, config));
+			if (accessToken.isPresent()) {
+				instance.setIdentity(accessToken.get());
+			}
+			else {
+				throw new MongoServiceException("Unable to retrieve cf access token");
+			}
+		}
+		return instance;
+	}
+
+	private String getCfAccessToken(ServiceInstanceParams instance, MongoConfig config) {
+		String accessToken = null;
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+			String authorization = "cf" + ":" + "";
+			headers.set("Authorization", "Basic " + new String(Base64
+					.encodeBase64(authorization.getBytes(Charset.forName("US-ASCII")))));
+			MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+			body.add("username", config.getCfUser());
+			body.add("password", config.getCfPassword());
+			body.add("client_id", "cf");
+			body.add("grant_type", "password");
+			body.add("response_type", "token");
+			ResponseEntity<String> output = apiService.exchange(instance.getCfUaaAPI(),
+					POST, new HttpEntity<MultiValueMap>(body, headers), String.class);
+			if (output.getStatusCode().is2xxSuccessful()) {
+				accessToken = mapper.readTree(output.getBody()).get("access_token")
+						.textValue();
+			}
+			else {
+				throw new IOException("Unable to get access token: " + output.getBody());
+			}
+		}
+		catch (IOException e) {
+			LOGGER.error("Unable to get access token", e);
+		}
+		return accessToken;
+	}
+
+	private ServiceKey processClusterParams(ServiceInstanceParams objInstance) {
+		ServiceKey key;
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		headers.set("Authorization", "Bearer " + objInstance.getIdentity());
-		Optional<ServiceList> serviceObj = Optional
-				.ofNullable(
-						apiService
-								.exchange(serviceListAPI, HttpMethod.GET,
-										new HttpEntity(headers), ServiceList.class)
-								.getBody());
+		Optional<ServiceList> serviceObj = Optional.ofNullable(apiService.exchange(
+				objInstance.getCfAPI() + SERVICE_INSTANCE + "?q=name:"
+						+ objInstance.getClusterName(),
+				HttpMethod.GET, new HttpEntity(headers), ServiceList.class).getBody());
 		if (serviceObj.isPresent() && serviceObj.get().getTotalResults() > 0) {
-			JsonNode body = mapper.createObjectNode();
+			JsonNode body = new ObjectMapper().createObjectNode();
 			((ObjectNode) body).put("service_instance_guid",
 					serviceObj.get().getResources().get(0).getMetadata().getGuid());
-			((ObjectNode) body).put("name", "key-" + System.currentTimeMillis());
-			key = apiService.exchange(createServiceKeyAPI, HttpMethod.POST,
+			((ObjectNode) body).put("name", "key-" + objInstance.getUnq());
+			key = apiService.exchange(objInstance.getCfAPI() + SERVICE_KEY, POST,
 					new HttpEntity<Object>(body.toString(), headers), ServiceKey.class)
 					.getBody();
+		}
+		else {
+			throw new MongoServiceException(
+					"CF service instance doesn't exist: " + objInstance.getClusterName());
 		}
 		return key;
 	}
@@ -200,6 +250,9 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 				mongo.deleteDatabase(instanceId);
 				repository.delete(instanceId);
 				k8sService.deleteK8sObjects(instance.getInstanceParams());
+				if (instance.getInstanceParams().isAutoMode()) {
+					deleteServiceKey(instance.getInstanceParams());
+				}
 				operationStatus.put(instanceId, SUCCEEDED);
 			}
 			catch (Exception ex) {
@@ -208,6 +261,21 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 			}
 		}));
 		return new DeleteServiceInstanceResponse().withAsync(true);
+	}
+
+	private void deleteServiceKey(ServiceInstanceParams objInstance) {
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.set("Authorization", "Bearer " + getCfAccessToken(objInstance, config));
+		ResponseEntity<String> response = apiService
+				.exchange(
+						objInstance.getCfAPI() + SERVICE_KEY + "/"
+								+ objInstance.getServiceKey() + "?",
+						DELETE, new HttpEntity<>(headers), String.class);
+		if (!response.getStatusCode().is2xxSuccessful()) {
+			throw new MongoServiceException("Unable to delete the CF service key: "
+					+ objInstance.getServiceKey());
+		}
 	}
 
 	@Override

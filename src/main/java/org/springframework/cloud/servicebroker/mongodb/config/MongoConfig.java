@@ -46,6 +46,12 @@ public class MongoConfig {
     @Value("${mongodb.service.timeout:30}")
     private long serviceTimeout;
 
+    @Value("${cf.user}")
+    private String cfUser;
+
+    @Value("${cf.password}")
+    private String cfPassword;
+
 	@Bean
 	public MongoClient mongoClient() {
 		final MongoCredential credential = MongoCredential.createScramSha1Credential(username, authSource, password.toCharArray());
@@ -74,5 +80,13 @@ public class MongoConfig {
 
     public long getServiceTimeout() {
         return serviceTimeout;
+    }
+
+    public String getCfUser() {
+        return cfUser;
+    }
+
+    public String getCfPassword() {
+        return cfPassword;
     }
 }

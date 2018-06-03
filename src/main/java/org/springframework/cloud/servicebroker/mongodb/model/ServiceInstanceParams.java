@@ -52,6 +52,9 @@ public class ServiceInstanceParams {
 	}
 
 	@JsonSerialize
+	private final long unq = System.currentTimeMillis();
+
+	@JsonSerialize
 	@JsonProperty("namespace")
 	private String namespace;
 	@JsonSerialize
@@ -71,12 +74,21 @@ public class ServiceInstanceParams {
 	@JsonSerialize
 	@JsonProperty("cluster_name")
 	private String clusterName;
+	@JsonSerialize
     @JsonProperty("identity")
 	private String identity;
+	@JsonSerialize
     @JsonProperty("service_key")
 	private String serviceKey;
 
+	@JsonSerialize
 	private boolean autoMode;
+
+    @JsonSerialize
+	private String cfAPI;
+
+	@JsonSerialize
+	private String cfUaaAPI;
 
 	/**
 	 * Create a ServiceInstanceParams from a create request. If fields are not present in
@@ -88,9 +100,10 @@ public class ServiceInstanceParams {
 		initialize(config);
 		populate(request);
 		populatePlanParams(request);
+		populateRequestInfo(request);
 	}
 
-	public ServiceInstanceParams(String namespace, String name, String accessToken,
+    public ServiceInstanceParams(String namespace, String name, String accessToken,
 			String url, int exposePort, long serviceTimeout, String storage,
 			int replicas) {
 		this.namespace = namespace;
@@ -160,10 +173,17 @@ public class ServiceInstanceParams {
 						}));
 	}
 
-	public void populateServiceParams(ServiceKey serviceKey) {
+    private void populateRequestInfo(CreateServiceInstanceRequest request) {
+        setCfAPI( "https://" + request.getApiInfoLocation().substring(0,
+                request.getApiInfoLocation().indexOf("/")));
+        setCfUaaAPI("https://uaa" + request.getApiInfoLocation().substring(request.getApiInfoLocation().indexOf("."),
+                request.getApiInfoLocation().indexOf("/")) + "/oauth/token" );
+    }
+
+    public void populateServiceParams(ServiceKey serviceKey) {
 		setUrl(serviceKey.getEntity().getCredentials().getMasterUrl());
 		setAccessToken(serviceKey.getEntity().getCredentials().getToken());
-		setNamespace("ns-" + System.currentTimeMillis());
+		setNamespace("ns-" + unq);
 		setServiceKey(serviceKey.getMetadata().getGuid());
 		setAutoMode(true);
 	}
@@ -202,7 +222,7 @@ public class ServiceInstanceParams {
 
 	public String getName() {
 		if (name == null || name.isEmpty()) {
-			name = "mongo-" + System.currentTimeMillis();
+			name = "mongo-" + unq;
 		}
 		return name;
 	}
@@ -291,20 +311,43 @@ public class ServiceInstanceParams {
         this.serviceKey = serviceKey;
     }
 
+    public long getUnq() {
+        return unq;
+    }
+
+    public String getCfAPI() {
+        return cfAPI;
+    }
+
+    public void setCfAPI(String cfAPI) {
+        this.cfAPI = cfAPI;
+    }
+
+    public String getCfUaaAPI() {
+        return cfUaaAPI;
+    }
+
+    public void setCfUaaAPI(String cfUaaAPI) {
+        this.cfUaaAPI = cfUaaAPI;
+    }
+
     @Override
-	public String toString() {
-		final StringBuilder sb = new StringBuilder("ServiceInstanceParams{");
-		sb.append("namespace='").append(namespace).append('\'');
-		sb.append(", name='").append(name).append('\'');
-		sb.append(", accessToken='").append(accessToken).append('\'');
-		sb.append(", url='").append(url).append('\'');
-		sb.append(", exposePort=").append(exposePort);
-		sb.append(", serviceTimeout=").append(serviceTimeout);
-		sb.append(", storage='").append(storage).append('\'');
-		sb.append(", replicas=").append(replicas);
-		sb.append(", clusterName='").append(clusterName).append('\'');
-		sb.append(", identity='").append(identity).append('\'');
-		sb.append('}');
-		return sb.toString();
-	}
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("ServiceInstanceParams{");
+        sb.append("unq=").append(unq);
+        sb.append(", namespace='").append(namespace).append('\'');
+        sb.append(", name='").append(name).append('\'');
+        sb.append(", url='").append(url).append('\'');
+        sb.append(", exposePort=").append(exposePort);
+        sb.append(", serviceTimeout=").append(serviceTimeout);
+        sb.append(", storage='").append(storage).append('\'');
+        sb.append(", replicas=").append(replicas);
+        sb.append(", clusterName='").append(clusterName).append('\'');
+        sb.append(", serviceKey='").append(serviceKey).append('\'');
+        sb.append(", autoMode=").append(autoMode);
+        sb.append(", cfAPI='").append(cfAPI).append('\'');
+        sb.append(", cfUaaAPI='").append(cfUaaAPI).append('\'');
+        sb.append('}');
+        return sb.toString();
+    }
 }

@@ -105,8 +105,7 @@ public class MongoK8sService {
 			}
 		}
 		if (!actionStatus(headers, serviceObj)) {
-			LOGGER.error(
-					"POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
+			LOGGER.error("POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
 			return false;
 		}
 		return true;
