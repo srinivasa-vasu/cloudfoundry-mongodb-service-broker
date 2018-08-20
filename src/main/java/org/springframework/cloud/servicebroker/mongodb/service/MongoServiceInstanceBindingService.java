@@ -127,24 +127,4 @@ public class MongoServiceInstanceBindingService implements ServiceInstanceBindin
 		return bindingRepository.findOne(id);
 	}
 
-	//@formatter:off
-/*
-	public CredentialDetails<UserParametersRequest> generateCredential(
-			CreateServiceInstanceBindingRequest bindingRequest) {
-		UserParametersRequest request = UserParametersRequest.builder().overwrite(true)
-				.name(ServiceInstanceCredentialName.builder()
-						.serviceBrokerName(bindingRequest.getServiceInstanceId())
-						.serviceOfferingName(bindingRequest.getPlanId())
-						.serviceBindingId(bindingRequest.getBindingId())
-						.credentialName("userparameter").build())
-				.username(bindingRequest.getBindingId())
-				.parameters(PasswordParameters.builder().length(20).excludeLower(false)
-						.excludeUpper(false).excludeNumber(false).includeSpecial(true)
-						.build())
-				.build();
-		return credHubOperations.generate(request);
-	}
-*/
-    //@formatter:on
-
 }
