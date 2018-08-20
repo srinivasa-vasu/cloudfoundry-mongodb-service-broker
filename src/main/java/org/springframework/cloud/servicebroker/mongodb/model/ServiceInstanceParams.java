@@ -19,10 +19,15 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 public class ServiceInstanceParams {
 
 	enum ObjVars {
-		TOKEN("token"), NAMESPACE("namespace"), SERVICE_NAME("service_name",
-				"servicename"), MASTER_URL("master_url", "masterurl"), EXPOSE_PORT(
-						"expose_port", "exposeport"), CLUSTER_NAME("cluster_name",
-								"clustername"), IDENTITY("identity"), DEFAULT("");
+		//@formatter:off
+		TOKEN("token"), 
+		NAMESPACE("namespace"), 
+		SERVICE_NAME("service_name", "servicename"), 
+		MASTER_URL("master_url", "masterurl"), 
+		EXPOSE_PORT("expose_port", "exposeport"), 
+		CLUSTER_NAME("cluster_name", "clustername"), 
+		IDENTITY("identity"), DEFAULT("");
+		//@formatter:on
 
 		private String[] keys;
 
@@ -75,16 +80,16 @@ public class ServiceInstanceParams {
 	@JsonProperty("cluster_name")
 	private String clusterName;
 	@JsonSerialize
-    @JsonProperty("identity")
+	@JsonProperty("identity")
 	private String identity;
 	@JsonSerialize
-    @JsonProperty("service_key")
+	@JsonProperty("service_key")
 	private String serviceKey;
 
 	@JsonSerialize
 	private boolean autoMode;
 
-    @JsonSerialize
+	@JsonSerialize
 	private String cfAPI;
 
 	@JsonSerialize
@@ -103,7 +108,7 @@ public class ServiceInstanceParams {
 		populateRequestInfo(request);
 	}
 
-    public ServiceInstanceParams(String namespace, String name, String accessToken,
+	public ServiceInstanceParams(String namespace, String name, String accessToken,
 			String url, int exposePort, long serviceTimeout, String storage,
 			int replicas) {
 		this.namespace = namespace;
@@ -173,14 +178,15 @@ public class ServiceInstanceParams {
 						}));
 	}
 
-    private void populateRequestInfo(CreateServiceInstanceRequest request) {
-        setCfAPI( "https://" + request.getApiInfoLocation().substring(0,
-                request.getApiInfoLocation().indexOf("/")));
-        setCfUaaAPI("https://uaa" + request.getApiInfoLocation().substring(request.getApiInfoLocation().indexOf("."),
-                request.getApiInfoLocation().indexOf("/")) + "/oauth/token" );
-    }
+	private void populateRequestInfo(CreateServiceInstanceRequest request) {
+		//@formatter:off
+		setCfAPI("https://" + request.getApiInfoLocation().substring(0, request.getApiInfoLocation().indexOf("/")));
+		setCfUaaAPI("https://uaa" + request.getApiInfoLocation().substring(request.getApiInfoLocation().indexOf("."),
+                request.getApiInfoLocation().indexOf("/")) + "/oauth/token");
+        //@formatter:on
+	}
 
-    public void populateServiceParams(ServiceKey serviceKey) {
+	public void populateServiceParams(ServiceKey serviceKey) {
 		setUrl(serviceKey.getEntity().getCredentials().getMasterUrl());
 		setAccessToken(serviceKey.getEntity().getCredentials().getToken());
 		setNamespace("ns-" + unq);
@@ -196,9 +202,6 @@ public class ServiceInstanceParams {
 		if (isEmpty(getUrl())) {
 			errorMsg = ObjVars.MASTER_URL.getInput();
 		}
-//		if (isEmpty(getName())) {
-//			errorMsg = ObjVars.SERVICE_NAME.getInput();
-//		}
 		if (isEmpty(getNamespace())) {
 			errorMsg = ObjVars.NAMESPACE.getInput();
 		}
@@ -295,59 +298,59 @@ public class ServiceInstanceParams {
 		this.identity = identity;
 	}
 
-    public boolean isAutoMode() {
-        return autoMode;
-    }
+	public boolean isAutoMode() {
+		return autoMode;
+	}
 
-    public void setAutoMode(boolean autoMode) {
-        this.autoMode = autoMode;
-    }
+	public void setAutoMode(boolean autoMode) {
+		this.autoMode = autoMode;
+	}
 
-    public String getServiceKey() {
-        return serviceKey;
-    }
+	public String getServiceKey() {
+		return serviceKey;
+	}
 
-    public void setServiceKey(String serviceKey) {
-        this.serviceKey = serviceKey;
-    }
+	public void setServiceKey(String serviceKey) {
+		this.serviceKey = serviceKey;
+	}
 
-    public long getUnq() {
-        return unq;
-    }
+	public long getUnq() {
+		return unq;
+	}
 
-    public String getCfAPI() {
-        return cfAPI;
-    }
+	public String getCfAPI() {
+		return cfAPI;
+	}
 
-    public void setCfAPI(String cfAPI) {
-        this.cfAPI = cfAPI;
-    }
+	public void setCfAPI(String cfAPI) {
+		this.cfAPI = cfAPI;
+	}
 
-    public String getCfUaaAPI() {
-        return cfUaaAPI;
-    }
+	public String getCfUaaAPI() {
+		return cfUaaAPI;
+	}
 
-    public void setCfUaaAPI(String cfUaaAPI) {
-        this.cfUaaAPI = cfUaaAPI;
-    }
+	public void setCfUaaAPI(String cfUaaAPI) {
+		this.cfUaaAPI = cfUaaAPI;
+	}
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("ServiceInstanceParams{");
-        sb.append("unq=").append(unq);
-        sb.append(", namespace='").append(namespace).append('\'');
-        sb.append(", name='").append(name).append('\'');
-        sb.append(", url='").append(url).append('\'');
-        sb.append(", exposePort=").append(exposePort);
-        sb.append(", serviceTimeout=").append(serviceTimeout);
-        sb.append(", storage='").append(storage).append('\'');
-        sb.append(", replicas=").append(replicas);
-        sb.append(", clusterName='").append(clusterName).append('\'');
-        sb.append(", serviceKey='").append(serviceKey).append('\'');
-        sb.append(", autoMode=").append(autoMode);
-        sb.append(", cfAPI='").append(cfAPI).append('\'');
-        sb.append(", cfUaaAPI='").append(cfUaaAPI).append('\'');
-        sb.append('}');
-        return sb.toString();
-    }
+	@Override
+	public String toString() {
+		final StringBuilder sb = new StringBuilder("ServiceInstanceParams{");
+		sb.append("unq=").append(unq);
+		sb.append(", namespace='").append(namespace).append('\'');
+		sb.append(", name='").append(name).append('\'');
+		sb.append(", url='").append(url).append('\'');
+		sb.append(", exposePort=").append(exposePort);
+		sb.append(", serviceTimeout=").append(serviceTimeout);
+		sb.append(", storage='").append(storage).append('\'');
+		sb.append(", replicas=").append(replicas);
+		sb.append(", clusterName='").append(clusterName).append('\'');
+		sb.append(", serviceKey='").append(serviceKey).append('\'');
+		sb.append(", autoMode=").append(autoMode);
+		sb.append(", cfAPI='").append(cfAPI).append('\'');
+		sb.append(", cfUaaAPI='").append(cfUaaAPI).append('\'');
+		sb.append('}');
+		return sb.toString();
+	}
 }

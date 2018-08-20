@@ -30,10 +30,14 @@ public class MongoK8sService {
 
 	enum K8sObject {
 
-		DISCOVERY_SERVICE("discovery_service.yml"), HEADLESS_SERVICE(
-				"headless_service.yml"), STATEFULSET("statefulset.yml"), CONFIGMAP(
-						"configmap.yml"), STORAGE_CLASS(
-								"storage_gcp.yml"), NAMESPACE("namespace.yml");
+		//@formatter:off
+		DISCOVERY_SERVICE("discovery_service.yml"), 
+		HEADLESS_SERVICE("headless_service.yml"), 
+		STATEFULSET("statefulset.yml"), 
+		CONFIGMAP("configmap.yml"), 
+		STORAGE_CLASS("storage_gcp.yml"), 
+		NAMESPACE("namespace.yml");
+		//@formatter:on
 
 		private String fileName;
 		private static final List<K8sObject> orderedList = new ArrayList<>();
@@ -103,8 +107,9 @@ public class MongoK8sService {
 			}
 		}
 		if (!actionStatus(headers, serviceObj, true)) {
-			LOGGER.error(
-					"POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
+			//@formatter:off
+			LOGGER.error("POD creation has failed or taking longer time to complete. Exceeded the threshold wait time");
+			//@formatter:on
 			return false;
 		}
 		return true;
@@ -122,8 +127,9 @@ public class MongoK8sService {
 			deleteObjectIfExists(obj, headers, serviceObj);
 		}
 		if (!actionStatus(headers, serviceObj, false)) {
-			LOGGER.error(
-					"Object deletion has failed or taking longer time to complete. Exceeded the threshold wait time");
+			//@formatter:off
+			LOGGER.error("Object deletion has failed or taking longer time to complete. Exceeded the threshold wait time");
+			//@formatter:on
 		}
 
 	}
@@ -140,13 +146,12 @@ public class MongoK8sService {
 			}
 		}
 
+		//@formatter:off
 		ResponseEntity<String> result = restTemplate.exchange(
 				getEndpoint(obj, serviceObj, false), HttpMethod.POST,
-				new HttpEntity<>(
-						FreeMarkerTemplateUtils.processTemplateIntoString(
-								config.getTemplate(obj.getFileName()), serviceObj),
-						headers),
-				String.class);
+				new HttpEntity<>(FreeMarkerTemplateUtils.processTemplateIntoString(
+								config.getTemplate(obj.getFileName()), serviceObj), headers), String.class);
+		//@formatter:on
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("Creation of " + obj + " : ", result.getStatusCode(),
 					result.getBody());

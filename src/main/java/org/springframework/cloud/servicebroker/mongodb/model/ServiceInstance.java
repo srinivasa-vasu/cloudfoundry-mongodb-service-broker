@@ -74,7 +74,7 @@ public class ServiceInstance {
 	public ServiceInstance(CreateServiceInstanceRequest request) {
 		this.serviceDefinitionId = request.getServiceDefinitionId();
 		this.planId = request.getPlanId();
-		this.organizationGuid = request.getOrganizationGuid();
+		this.organizationGuid = (String) request.getContext().getProperty("organization_guid");
 		this.spaceGuid = request.getSpaceGuid();
 		this.id = request.getServiceInstanceId();
 		this.parameters = request.getParameters();
@@ -84,7 +84,7 @@ public class ServiceInstance {
 			ServiceInstanceParams params) {
 		this.serviceDefinitionId = request.getServiceDefinitionId();
 		this.planId = request.getPlanId();
-		this.organizationGuid = request.getOrganizationGuid();
+		this.organizationGuid = (String) request.getContext().getProperty("organization_guid");
 		this.spaceGuid = request.getSpaceGuid();
 		this.id = request.getServiceInstanceId();
 		this.parameters = request.getParameters();

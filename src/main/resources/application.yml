@@ -5,3 +5,9 @@ mongodb:
   password: password
 service:
   id: mongodb
+logging:
+  level:
+    org:
+      springframework:
+        web: DEBUG
+        security: DEBUG
