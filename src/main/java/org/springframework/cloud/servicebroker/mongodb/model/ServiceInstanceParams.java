@@ -7,9 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
-import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
-import org.springframework.cloud.servicebroker.model.ServiceBrokerRequest;
+import org.springframework.cloud.servicebroker.model.instance.CreateServiceInstanceRequest;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
 import org.springframework.cloud.servicebroker.mongodb.dto.ServiceKey;
 
@@ -101,7 +99,7 @@ public class ServiceInstanceParams {
 	 * @param request containing details of ServiceInstance
 	 */
 	public ServiceInstanceParams(CreateServiceInstanceRequest request,
-			MongoConfig config) {
+								 MongoConfig config) {
 		initialize(config);
 		populate(request);
 		populatePlanParams(request);

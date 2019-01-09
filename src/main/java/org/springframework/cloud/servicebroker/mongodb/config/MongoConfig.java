@@ -2,7 +2,7 @@ package org.springframework.cloud.servicebroker.mongodb.config;
 
 import java.util.Arrays;
 
-import org.springframework.beans.factory.annotation.Required;
+import com.mongodb.MongoClientOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,8 +54,9 @@ public class MongoConfig {
 
 	@Bean
 	public MongoClient mongoClient() {
-		final MongoCredential credential = MongoCredential.createScramSha1Credential(username, authSource, password.toCharArray());
-		return new MongoClient(new ServerAddress(host, port), Arrays.asList(credential));
+		//final MongoCredential credential = MongoCredential.createScramSha1Credential(username, authSource, password.toCharArray());
+        final MongoCredential credential = MongoCredential.createCredential(username, authSource, password.toCharArray());
+		return new MongoClient(new ServerAddress(host, port), credential, MongoClientOptions.builder().build());
 	}
 
     public int getPort() {

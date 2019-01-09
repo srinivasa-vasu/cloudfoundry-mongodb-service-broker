@@ -1,0 +1,40 @@
+{
+  "properties": [
+    {
+      "name": "broker.username",
+      "type": "java.lang.String",
+      "description": "Username required to register the service broker with CF marketplace",
+      "defaultValue": ""
+    },
+    {
+      "name": "broker.password",
+      "type": "java.lang.String",
+      "description": "Password required to register the service broker with CF marketplace",
+      "defaultValue": ""
+    },
+    {
+      "name": "mongodb.username",
+      "type": "java.lang.String",
+      "description": "Admin username to initialise the mongodb cluster",
+      "defaultValue": ""
+    },
+    {
+      "name": "mongodb.password",
+      "type": "java.lang.String",
+      "description": "Admin username to initialise the mongodb cluster",
+      "defaultValue": ""
+    },
+    {
+      "name": "mongodb.host",
+      "type": "java.lang.String",
+      "description": "MongoDB cluster host name",
+      "defaultValue": ""
+    },
+    {
+      "name": "mongodb.port",
+      "type": "java.lang.Integer",
+      "description": "MongoDB cluster host port",
+      "defaultValue": 31000
+    }
+  ]
+}

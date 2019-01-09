@@ -1,9 +1,6 @@
 package org.springframework.cloud.servicebroker.mongodb.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.verify;
@@ -18,11 +15,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
 import org.springframework.cloud.servicebroker.exception.ServiceInstanceDoesNotExistException;
 import org.springframework.cloud.servicebroker.exception.ServiceInstanceExistsException;
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceResponse;
-import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
-import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceResponse;
-import org.springframework.cloud.servicebroker.model.ServiceDefinition;
+import org.springframework.cloud.servicebroker.model.catalog.ServiceDefinition;
+import org.springframework.cloud.servicebroker.model.instance.CreateServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.instance.CreateServiceInstanceResponse;
+import org.springframework.cloud.servicebroker.model.instance.DeleteServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.instance.DeleteServiceInstanceResponse;
 import org.springframework.cloud.servicebroker.mongodb.IntegrationTestBase;
 import org.springframework.cloud.servicebroker.mongodb.fixture.ServiceInstanceFixture;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstance;
@@ -38,41 +35,42 @@ public class MongoServiceInstanceServiceTest extends IntegrationTestBase {
 
 	@Autowired
 	private MongoClient client;
-	
+
 	@Mock
 	private MongoAdminService mongo;
 
 	@Mock
 	private MongoServiceInstanceRepository repository;
-	
+
 	@Mock
 	private MongoDatabase db;
 
 	@Mock
 	private ServiceDefinition serviceDefinition;
-	
+
 	private MongoServiceInstanceService service;
-	
+
 	@Before
 	public void setup() {
 		MockitoAnnotations.initMocks(this);
-		
-		service = new MongoServiceInstanceService(mongo, repository);
+
+		service = new MongoServiceInstanceService(mongo, repository, null, null, null);
 	}
-	
+
 	@After
 	public void cleanup() {
 		client.dropDatabase(DB_NAME);
 	}
-	
+
 	@Test
 	public void newServiceInstanceCreatedSuccessfully() throws Exception {
-		when(repository.findOne(any(String.class))).thenReturn(null);
+		when(repository.findById(any(String.class)).get()).thenReturn(null);
 		when(mongo.databaseExists(any(String.class))).thenReturn(false);
 		when(mongo.createDatabase(any(String.class))).thenReturn(db);
 
-		CreateServiceInstanceResponse response = service.createServiceInstance(buildCreateRequest());
-		
+		CreateServiceInstanceResponse response = service
+				.createServiceInstance(buildCreateRequest());
+
 		assertNotNull(response);
 		assertNull(response.getDashboardUrl());
 		assertFalse(response.isAsync());
@@ -83,7 +81,7 @@ public class MongoServiceInstanceServiceTest extends IntegrationTestBase {
 	@Test
 	public void newServiceInstanceCreatedSuccessfullyWithExistingDB() throws Exception {
 
-		when(repository.findOne(any(String.class))).thenReturn(null);
+		when(repository.findById(any(String.class)).get()).thenReturn(null);
 		when(mongo.databaseExists(any(String.class))).thenReturn(true);
 		when(mongo.createDatabase(any(String.class))).thenReturn(db);
 
@@ -98,16 +96,17 @@ public class MongoServiceInstanceServiceTest extends IntegrationTestBase {
 		verify(repository).save(isA(ServiceInstance.class));
 	}
 
-	@Test(expected=ServiceInstanceExistsException.class)
+	@Test(expected = ServiceInstanceExistsException.class)
 	public void serviceInstanceCreationFailsWithExistingInstance() throws Exception {
-		when(repository.findOne(any(String.class))).thenReturn(ServiceInstanceFixture.getServiceInstance());
+		when(repository.findById(any(String.class)).get())
+				.thenReturn(ServiceInstanceFixture.getServiceInstance());
 
 		service.createServiceInstance(buildCreateRequest());
 	}
 
-	@Test(expected=ServiceBrokerException.class)
+	@Test(expected = ServiceBrokerException.class)
 	public void serviceInstanceCreationFailsWithDBCreationFailure() throws Exception {
-		when(repository.findOne(any(String.class))).thenReturn(null);
+		when(repository.findById(any(String.class)).get()).thenReturn(null);
 		when(mongo.databaseExists(any(String.class))).thenReturn(false);
 		when(mongo.createDatabase(any(String.class))).thenReturn(null);
 
@@ -116,7 +115,8 @@ public class MongoServiceInstanceServiceTest extends IntegrationTestBase {
 
 	@Test
 	public void successfullyRetrieveServiceInstance() {
-		when(repository.findOne(any(String.class))).thenReturn(ServiceInstanceFixture.getServiceInstance());
+		when(repository.findById(any(String.class)).get())
+				.thenReturn(ServiceInstanceFixture.getServiceInstance());
 		String id = ServiceInstanceFixture.getServiceInstance().getServiceInstanceId();
 		assertEquals(id, service.getServiceInstance(id).getServiceInstanceId());
 	}
@@ -124,21 +124,22 @@ public class MongoServiceInstanceServiceTest extends IntegrationTestBase {
 	@Test
 	public void serviceInstanceDeletedSuccessfully() throws Exception {
 		ServiceInstance instance = ServiceInstanceFixture.getServiceInstance();
-		when(repository.findOne(any(String.class))).thenReturn(instance);
+		when(repository.findById(any(String.class)).get()).thenReturn(instance);
 		String id = instance.getServiceInstanceId();
 
-		DeleteServiceInstanceResponse response = service.deleteServiceInstance(buildDeleteRequest());
+		DeleteServiceInstanceResponse response = service
+				.deleteServiceInstance(buildDeleteRequest());
 
 		assertNotNull(response);
 		assertFalse(response.isAsync());
 
 		verify(mongo).deleteDatabase(id);
-		verify(repository).delete(id);
+		verify(repository).deleteById(id);
 	}
 
 	@Test(expected = ServiceInstanceDoesNotExistException.class)
 	public void unknownServiceInstanceDeleteCallSuccessful() throws Exception {
-		when(repository.findOne(any(String.class))).thenReturn(null);
+		when(repository.findById(any(String.class)).get()).thenReturn(null);
 
 		DeleteServiceInstanceRequest request = buildDeleteRequest();
 
@@ -148,16 +149,20 @@ public class MongoServiceInstanceServiceTest extends IntegrationTestBase {
 		assertFalse(response.isAsync());
 
 		verify(mongo).deleteDatabase(request.getServiceInstanceId());
-		verify(repository).delete(request.getServiceInstanceId());
+		verify(repository).deleteById(request.getServiceInstanceId());
 	}
 
 	private CreateServiceInstanceRequest buildCreateRequest() {
-		return new CreateServiceInstanceRequest(SVC_DEF_ID, SVC_PLAN_ID, "organizationGuid", "spaceGuid", null)
-				.withServiceInstanceId(ServiceInstanceFixture.getServiceInstance().getServiceInstanceId());
+		return CreateServiceInstanceRequest.builder().serviceDefinitionId(SVC_DEF_ID)
+				.serviceInstanceId(ServiceInstanceFixture.getServiceInstance()
+						.getServiceInstanceId())
+				.planId(SVC_PLAN_ID).serviceDefinition(serviceDefinition).build();
 	}
 
 	private DeleteServiceInstanceRequest buildDeleteRequest() {
-		return new DeleteServiceInstanceRequest(ServiceInstanceFixture.getServiceInstance().getServiceInstanceId(),
-				SVC_DEF_ID, SVC_PLAN_ID, serviceDefinition);
+		return DeleteServiceInstanceRequest.builder().serviceDefinitionId(SVC_DEF_ID)
+				.serviceInstanceId(ServiceInstanceFixture.getServiceInstance()
+						.getServiceInstanceId())
+				.planId(SVC_PLAN_ID).serviceDefinition(serviceDefinition).build();
 	}
 }

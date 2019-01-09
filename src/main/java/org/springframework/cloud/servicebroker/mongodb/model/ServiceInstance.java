@@ -2,9 +2,9 @@ package org.springframework.cloud.servicebroker.mongodb.model;
 
 import java.util.Map;
 
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceRequest;
-import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceRequest;
-import org.springframework.cloud.servicebroker.model.UpdateServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.instance.CreateServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.instance.DeleteServiceInstanceRequest;
+import org.springframework.cloud.servicebroker.model.instance.UpdateServiceInstanceRequest;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -75,7 +75,7 @@ public class ServiceInstance {
 		this.serviceDefinitionId = request.getServiceDefinitionId();
 		this.planId = request.getPlanId();
 		this.organizationGuid = (String) request.getContext().getProperty("organization_guid");
-		this.spaceGuid = request.getSpaceGuid();
+		this.spaceGuid = (String) request.getContext().getProperty("space_guid");
 		this.id = request.getServiceInstanceId();
 		this.parameters = request.getParameters();
 	}
@@ -85,7 +85,7 @@ public class ServiceInstance {
 		this.serviceDefinitionId = request.getServiceDefinitionId();
 		this.planId = request.getPlanId();
 		this.organizationGuid = (String) request.getContext().getProperty("organization_guid");
-		this.spaceGuid = request.getSpaceGuid();
+		this.spaceGuid = (String) request.getContext().getProperty("space_guid");
 		this.id = request.getServiceInstanceId();
 		this.parameters = request.getParameters();
 		this.instanceParams = params;

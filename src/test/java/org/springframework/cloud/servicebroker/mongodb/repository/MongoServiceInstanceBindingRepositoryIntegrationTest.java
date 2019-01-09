@@ -48,7 +48,7 @@ public class MongoServiceInstanceBindingRepositoryIntegrationTest extends Integr
 		assertEquals(0, mongo.getCollection(COLLECTION).count());
 		repository.save(ServiceInstanceBindingFixture.getServiceInstanceBinding());
 		assertEquals(1, mongo.getCollection(COLLECTION).count());
-		repository.delete(ServiceInstanceBindingFixture.getServiceInstanceBinding().getId());
+		repository.deleteById(ServiceInstanceBindingFixture.getServiceInstanceBinding().getId());
 		assertEquals(0, mongo.getCollection(COLLECTION).count());
 	}
 }

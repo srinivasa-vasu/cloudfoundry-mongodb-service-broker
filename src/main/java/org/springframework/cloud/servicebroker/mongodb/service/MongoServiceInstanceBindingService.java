@@ -1,29 +1,29 @@
 package org.springframework.cloud.servicebroker.mongodb.service;
 
+import static org.springframework.cloud.servicebroker.model.instance.OperationState.SUCCEEDED;
+import static org.springframework.credhub.support.WriteMode.OVERWRITE;
 import static org.springframework.credhub.support.permissions.Operation.READ;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Optional;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.servicebroker.exception.ServiceInstanceBindingDoesNotExistException;
 import org.springframework.cloud.servicebroker.exception.ServiceInstanceBindingExistsException;
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceAppBindingResponse;
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceBindingRequest;
-import org.springframework.cloud.servicebroker.model.CreateServiceInstanceBindingResponse;
-import org.springframework.cloud.servicebroker.model.DeleteServiceInstanceBindingRequest;
+import org.springframework.cloud.servicebroker.model.binding.*;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceBinding;
 import org.springframework.cloud.servicebroker.mongodb.repository.MongoServiceInstanceBindingRepository;
 import org.springframework.cloud.servicebroker.service.ServiceInstanceBindingService;
 import org.springframework.credhub.core.CredHubOperations;
 import org.springframework.credhub.support.CredentialDetails;
+import org.springframework.credhub.support.CredentialName;
 import org.springframework.credhub.support.ServiceInstanceCredentialName;
 import org.springframework.credhub.support.json.JsonCredential;
 import org.springframework.credhub.support.json.JsonCredentialRequest;
-import org.springframework.credhub.support.permissions.CredentialPermission;
+import org.springframework.credhub.support.permissions.Permission;
 import org.springframework.stereotype.Service;
 
 /**
@@ -36,16 +36,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class MongoServiceInstanceBindingService implements ServiceInstanceBindingService {
 
-	private MongoAdminService mongo;
+	private final MongoAdminService mongo;
 
-	private MongoServiceInstanceBindingRepository bindingRepository;
+	private final MongoServiceInstanceBindingRepository bindingRepository;
 
-	private CredHubOperations credHubOperations;
+	private final CredHubOperations credHubOperations;
 
 	private static final Logger LOGGER = LoggerFactory
 			.getLogger(MongoServiceInstanceBindingService.class);
 
-	@Autowired
 	public MongoServiceInstanceBindingService(MongoAdminService mongo,
 			MongoServiceInstanceBindingRepository bindingRepository,
 			CredHubOperations credHubOperations) {
@@ -58,73 +57,78 @@ public class MongoServiceInstanceBindingService implements ServiceInstanceBindin
 	public CreateServiceInstanceBindingResponse createServiceInstanceBinding(
 			CreateServiceInstanceBindingRequest request) {
 
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug("createServiceInstanceBinding: IN");
+		}
+
 		String bindingId = request.getBindingId();
 		String serviceInstanceId = request.getServiceInstanceId();
 
-		ServiceInstanceBinding binding = bindingRepository.findOne(bindingId);
-		if (binding != null) {
+		Optional<ServiceInstanceBinding> binding = bindingRepository.findById(bindingId);
+		binding.ifPresent(serviceInstanceBinding -> {
 			throw new ServiceInstanceBindingExistsException(serviceInstanceId, bindingId);
-		}
+		});
 
-		String database = serviceInstanceId;
-		String username = bindingId;
 		String password = RandomStringUtils.randomAlphanumeric(25);
 
 		// TODO check if user already exists in the DB
 
-		mongo.createUser(database, username, password);
+		mongo.createUser(serviceInstanceId, bindingId, password);
+
+		CredentialName credName = ServiceInstanceCredentialName.builder()
+				.serviceBrokerName(request.getServiceInstanceId())
+				.serviceOfferingName(request.getPlanId())
+				.serviceBindingId(request.getBindingId())
+				.credentialName(request.getBindingId()).build();
 
 		// @formatter:off
 		JsonCredentialRequest credhubRequest = JsonCredentialRequest.builder()
-                .overwrite(true)
 				.value(Collections.singletonMap("uri",
-                (Object) mongo.getConnectionString(database, username, password)))
-				.permission(CredentialPermission.builder().app(request.getBindResource().getAppGuid())
-                .operations(READ).build())
-				.name(ServiceInstanceCredentialName.builder()
-                .serviceBrokerName(request.getServiceInstanceId())
-                .serviceOfferingName(request.getPlanId())
-                .serviceBindingId(request.getBindingId())
-                .credentialName(request.getBindingId()).build())
-				.build();
+                 mongo.getConnectionString(serviceInstanceId, bindingId, password)))
+				.name(credName).build();
         // @formatter:on
 
 		CredentialDetails<JsonCredential> credhubResponse = credHubOperations
-				.write(credhubRequest);
+				.credentials().write(credhubRequest);
+		credHubOperations.permissions().addPermissions(credName, Permission.builder()
+				.app(request.getBindResource().getAppGuid()).operations(READ).build());
 
-		binding = new ServiceInstanceBinding(bindingId, serviceInstanceId,
-				credhubResponse.getValue(), null, request.getBindResource().getAppGuid());
-		bindingRepository.save(binding);
+		LOGGER.info("Credhub response: " + credhubResponse.getId());
 
-		return new CreateServiceInstanceAppBindingResponse()
-				.withCredentials(new HashMap<String, Object>() {
+		bindingRepository.save(new ServiceInstanceBinding(bindingId, serviceInstanceId,
+				credhubResponse.getValue(), null, request.getBindResource().getAppGuid()));
+
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug("createServiceInstanceBinding: OUT");
+		}
+
+		return CreateServiceInstanceAppBindingResponse.builder()
+				.credentials(new HashMap<String, Object>() {
 					{
 						put("credhub-ref", credhubResponse.getName().getName());
 					}
-				});
+				}).operation(String.valueOf(SUCCEEDED)).build();
 	}
 
 	@Override
-	public void deleteServiceInstanceBinding(
+	public DeleteServiceInstanceBindingResponse deleteServiceInstanceBinding(
 			DeleteServiceInstanceBindingRequest request) {
 		String bindingId = request.getBindingId();
-		ServiceInstanceBinding binding = getServiceInstanceBinding(bindingId);
 
-		if (binding == null) {
+		Optional<ServiceInstanceBinding> binding = bindingRepository.findById(bindingId);
+		if(!binding.isPresent()){
 			throw new ServiceInstanceBindingDoesNotExistException(bindingId);
 		}
 
-		mongo.deleteUser(binding.getServiceInstanceId(), bindingId);
-		credHubOperations.deleteByName(ServiceInstanceCredentialName.builder()
+		mongo.deleteUser(binding.get().getServiceInstanceId(), bindingId);
+		credHubOperations.credentials().deleteByName(ServiceInstanceCredentialName.builder()
 				.serviceBrokerName(request.getServiceInstanceId())
 				.serviceOfferingName(request.getPlanId())
 				.serviceBindingId(request.getBindingId())
 				.credentialName(request.getBindingId()).build());
-		bindingRepository.delete(bindingId);
-	}
-
-	private ServiceInstanceBinding getServiceInstanceBinding(String id) {
-		return bindingRepository.findOne(id);
+		bindingRepository.deleteById(bindingId);
+		return DeleteServiceInstanceBindingResponse.builder()
+				.operation(String.valueOf(SUCCEEDED)).build();
 	}
 
 }

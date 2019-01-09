@@ -1,7 +1,15 @@
 mongodb:
-  host: x.x.x.x
-  port: 31000
+  host:
   username: admin
   password: password
+  port: 31000
 service:
   id: mongodb
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+spring:
+  application:
+    name: mongodb-service-broker

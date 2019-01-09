@@ -1,6 +1,6 @@
 package org.springframework.cloud.servicebroker.mongodb.service;
 
-import static org.springframework.cloud.servicebroker.model.OperationState.*;
+import static org.springframework.cloud.servicebroker.model.instance.OperationState.*;
 import static org.springframework.http.HttpMethod.DELETE;
 import static org.springframework.http.HttpMethod.POST;
 
@@ -19,13 +19,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.servicebroker.exception.ServiceBrokerException;
+import org.springframework.cloud.servicebroker.exception.ServiceInstanceBindingDoesNotExistException;
 import org.springframework.cloud.servicebroker.exception.ServiceInstanceDoesNotExistException;
-import org.springframework.cloud.servicebroker.model.*;
+import org.springframework.cloud.servicebroker.model.instance.*;
 import org.springframework.cloud.servicebroker.mongodb.config.MongoConfig;
 import org.springframework.cloud.servicebroker.mongodb.dto.ServiceKey;
 import org.springframework.cloud.servicebroker.mongodb.dto.ServiceList;
 import org.springframework.cloud.servicebroker.mongodb.exception.MongoServiceException;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstance;
+import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceBinding;
 import org.springframework.cloud.servicebroker.mongodb.model.ServiceInstanceParams;
 import org.springframework.cloud.servicebroker.mongodb.repository.MongoServiceInstanceRepository;
 import org.springframework.cloud.servicebroker.service.ServiceInstanceService;
@@ -34,7 +36,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mongodb.client.MongoDatabase;
@@ -125,7 +126,7 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 					}
 					repository.save(instance);
 					operationStatus.put(request.getServiceInstanceId(),
-							OperationState.SUCCEEDED);
+							SUCCEEDED);
 					if (LOGGER.isDebugEnabled()) {
 						LOGGER.debug("Successfully created the instance id: "
 								+ request.getServiceInstanceId());
@@ -144,7 +145,7 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 						+ ex.getMessage() + ": " + request.getServiceInstanceId(), ex);
 			}
 		}));
-		return new CreateServiceInstanceResponse().withAsync(true);
+		return CreateServiceInstanceResponse.builder().async(true).build();
 	}
 
 	private ServiceInstanceParams getServiceInstanceParams(
@@ -206,10 +207,9 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 						+ objInstance.getClusterName(),
 				HttpMethod.GET, new HttpEntity(headers), ServiceList.class).getBody());
 		if (serviceObj.isPresent() && serviceObj.get().getTotalResults() > 0) {
-			JsonNode body = new ObjectMapper().createObjectNode();
-			((ObjectNode) body).put("service_instance_guid",
-					serviceObj.get().getResources().get(0).getMetadata().getGuid());
-			((ObjectNode) body).put("name", "key-" + objInstance.getUnq());
+			ObjectNode body = new ObjectMapper().createObjectNode();
+			body.put("service_instance_guid",
+					serviceObj.get().getResources().get(0).getMetadata().getGuid()).put("name", "key-" + objInstance.getUnq());
 			key = apiService.exchange(objInstance.getCfAPI() + SERVICE_KEY, POST,
 					new HttpEntity<Object>(body.toString(), headers), ServiceKey.class)
 					.getBody();
@@ -226,14 +226,14 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 			GetLastServiceOperationRequest request) {
 		OperationState state = operationStatus.get(request.getServiceInstanceId());
 		if (state == IN_PROGRESS) {
-			return new GetLastServiceOperationResponse().withOperationState(state);
+			return GetLastServiceOperationResponse.builder().operationState(state).build();
 		}
 		operationStatus.remove(request.getServiceInstanceId());
-		return new GetLastServiceOperationResponse().withOperationState(state);
+		return GetLastServiceOperationResponse.builder().operationState(state).build();
 	}
 
 	ServiceInstance getServiceInstance(String id) {
-		return repository.findOne(id);
+		return repository.findById(id).get();
 	}
 
 	@Override
@@ -242,16 +242,21 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 		operationStatus.put(request.getServiceInstanceId(), IN_PROGRESS);
 		servicePool.execute(new Thread(() -> {
 			String instanceId = request.getServiceInstanceId();
+			LOGGER.info("Deleting service instance" + instanceId);
 			try {
-				ServiceInstance instance = repository.findOne(instanceId);
-				if (instance == null) {
+				Optional<ServiceInstance> instance = repository.findById(instanceId);
+				if(!instance.isPresent()){
+					LOGGER.error("Service instance doesn't exist " + request.getServiceInstanceId());
 					throw new ServiceInstanceDoesNotExistException(instanceId);
 				}
+				LOGGER.info("Deleting DB info " + instanceId);
 				mongo.deleteDatabase(instanceId);
-				repository.delete(instanceId);
-				k8sService.deleteK8sObjects(instance.getInstanceParams());
-				if (instance.getInstanceParams().isAutoMode()) {
-					deleteServiceKey(instance.getInstanceParams());
+				repository.deleteById(instanceId);
+				LOGGER.info("Deleting K8s manifests " + instanceId);
+				k8sService.deleteK8sObjects(instance.get().getInstanceParams());
+				if (instance.get().getInstanceParams().isAutoMode()) {
+					LOGGER.info("Deleting CF service key " + instanceId);
+					deleteServiceKey(instance.get().getInstanceParams());
 				}
 				operationStatus.put(instanceId, SUCCEEDED);
 			}
@@ -262,7 +267,7 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 								+ ": " + request.getServiceInstanceId(), ex);
 			}
 		}));
-		return new DeleteServiceInstanceResponse().withAsync(true);
+		return DeleteServiceInstanceResponse.builder().async(true).build();
 	}
 
 	private void deleteServiceKey(ServiceInstanceParams objInstance) {
@@ -278,6 +283,10 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 			throw new MongoServiceException("Unable to delete the CF service key: "
 					+ objInstance.getServiceKey());
 		}
+		LOGGER.info("CF service key " + objInstance.getServiceKey() + "deleted successfully");
+		if(LOGGER.isDebugEnabled()){
+			LOGGER.debug("CF service key " + objInstance.getServiceKey() + "deleted successfully");
+		}
 	}
 
 	@Override
@@ -285,14 +294,14 @@ public class MongoServiceInstanceService implements ServiceInstanceService {
 			UpdateServiceInstanceRequest request) {
 		// not implemented
 		String instanceId = request.getServiceInstanceId();
-		ServiceInstance instance = repository.findOne(instanceId);
+		ServiceInstance instance = repository.findById(instanceId).get();
 		if (instance == null) {
 			throw new ServiceInstanceDoesNotExistException(instanceId);
 		}
-		repository.delete(instanceId);
+		repository.deleteById(instanceId);
 		ServiceInstance updatedInstance = new ServiceInstance(request);
 		repository.save(updatedInstance);
-		return new UpdateServiceInstanceResponse();
+		return UpdateServiceInstanceResponse.builder().async(true).build();
 	}
 
 	@PreDestroy

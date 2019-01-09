@@ -50,7 +50,7 @@ public class MongoServiceInstanceRepositoryIntegrationTest extends IntegrationTe
 		assertEquals(0, mongo.getCollection(COLLECTION).count());
 		repository.save(instance);
 		assertEquals(1, mongo.getCollection(COLLECTION).count());
-		repository.delete(instance.getServiceInstanceId());
+		repository.deleteById(instance.getServiceInstanceId());
 		assertEquals(0, mongo.getCollection(COLLECTION).count());
 	}
 }
