@@ -17,7 +17,7 @@ spec:
     spec:
       initContainers:
         - name: config
-          image: "gcr.io/google_containers/mongodb-install:0.5"
+          image: "harbor.pcf.opus.local/ccdsdam/mongog:latest"
           args:
             - --work-dir=/work-dir
           volumeMounts:
@@ -49,7 +49,7 @@ spec:
               mountPath: /data/db
       containers:
         - name: mongodb
-          image: mongo:3.6.3
+          image: harbor.pcf.opus.local/ccdsdam/mongod:latest
           ports:
             - name: peer
               containerPort: 27017

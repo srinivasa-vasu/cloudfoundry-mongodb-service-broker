@@ -4,6 +4,6 @@ metadata:
   name: ${name}-storage
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: kubernetes.io/gce-pd
+provisioner: kubernetes.io/vsphere-volume
 parameters:
-  type: pd-standard
+  diskformat: thin  
